@@ -88,7 +88,7 @@ export default function Room() {
   if (!room) return <div className="room-loading">Loading...</div>;
 
   return (
-    <div className="room-page">
+    <div className="room-page" key={id}>
       {showVideoCall && (
         <VideoCall
           roomId={id}

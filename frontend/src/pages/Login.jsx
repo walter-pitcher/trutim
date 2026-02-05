@@ -29,7 +29,10 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <h1 className="logo-text">Trutim</h1>
+          <h1 className="logo-text">
+            <img src="/trutim-icon.svg" alt="Trutim" className="logo-icon" />
+            Trutim
+          </h1>
           <p>Real-time chat, video calls & collaboration for engineers</p>
         </div>
         <form onSubmit={handleSubmit} className="auth-form">

@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from .models import Room, Message, CallSession
-from .serializers import UserSerializer, RoomSerializer, MessageSerializer, CallSessionSerializer
+from .serializers import UserSerializer, RoomSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
 
 User = get_user_model()
 
@@ -56,13 +56,25 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return User.objects.exclude(id=self.request.user.id)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'patch'])
     def me(self, request):
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
         return Response(UserSerializer(request.user).data)
 
 
 class RoomViewSet(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RoomCreateSerializer
+        return RoomSerializer
 
     def get_queryset(self):
         return Room.objects.filter(members=self.request.user).distinct()
@@ -70,6 +82,31 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         room = serializer.save(created_by=self.request.user)
         room.members.add(self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def dm(self, request):
+        """Get or create a direct message room with another user."""
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            other = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        if other.id == request.user.id:
+            return Response({'error': 'Cannot create DM with yourself'}, status=status.HTTP_400_BAD_REQUEST)
+        room = Room.objects.filter(
+            is_direct=True,
+            members=request.user
+        ).filter(members=other).first()
+        if not room:
+            room = Room.objects.create(
+                name=f'{request.user.username} & {other.username}',
+                is_direct=True,
+                created_by=request.user
+            )
+            room.members.add(request.user, other)
+        return Response(RoomSerializer(room).data)
 
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):

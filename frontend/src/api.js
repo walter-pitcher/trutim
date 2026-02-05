@@ -39,12 +39,15 @@ export const auth = {
 };
 
 export const users = {
+  list: () => API.get('/users/'),
   me: () => API.get('/users/me/'),
+  updateMe: (data) => API.patch('/users/me/', data),
 };
 
 export const rooms = {
   list: () => API.get('/rooms/'),
   create: (data) => API.post('/rooms/', data),
+  dm: (userId) => API.post('/rooms/dm/', { user_id: userId }),
   get: (id) => API.get(`/rooms/${id}/`),
   join: (id) => API.post(`/rooms/${id}/join/`),
   leave: (id) => API.post(`/rooms/${id}/leave/`),

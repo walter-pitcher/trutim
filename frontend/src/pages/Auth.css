@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .auth-card {
@@ -14,6 +15,23 @@
   border-radius: var(--radius);
   padding: 2rem;
   box-shadow: var(--shadow);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-header {
@@ -22,8 +40,18 @@
 }
 
 .auth-header .logo-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   font-size: 2rem;
   margin-bottom: 0.25rem;
+}
+
+.auth-header .logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
 }
 
 .auth-header p {

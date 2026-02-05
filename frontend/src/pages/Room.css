@@ -1,14 +1,20 @@
 .room-loading {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .room-page {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  animation: roomFadeIn 0.25s ease-out;
+}
+
+@keyframes roomFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .room-header {
@@ -99,6 +105,18 @@
   border-radius: var(--radius);
   max-width: 85%;
   align-self: flex-start;
+  animation: messageIn 0.2s ease-out;
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message.own {

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true" role="img">
+  <defs>
+    <linearGradient id="trutim-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="trutim-grad-accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <!-- T stem: real-time connection / signal line -->
+  <rect x="28" y="8" width="8" height="40" rx="2" fill="url(#trutim-grad)"/>
+  <!-- T bar: bridge linking collaborators -->
+  <rect x="10" y="16" width="44" height="8" rx="2" fill="url(#trutim-grad-accent)"/>
+  <!-- Left node: participant in room -->
+  <circle cx="18" cy="20" r="5" fill="white" opacity="0.95"/>
+  <circle cx="18" cy="20" r="3" fill="url(#trutim-grad)"/>
+  <!-- Right node: participant in room -->
+  <circle cx="46" cy="20" r="5" fill="white" opacity="0.95"/>
+  <circle cx="46" cy="20" r="3" fill="url(#trutim-grad)"/>
+</svg>

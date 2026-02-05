@@ -12,12 +12,22 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'title', 'online', 'last_seen']
+        read_only_fields = ['id', 'online', 'last_seen']
 
 
 class UserMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'title', 'online']
+
+
+class RoomCreateSerializer(serializers.ModelSerializer):
+    """Minimal serializer for creating rooms - only accepts name and description."""
+    class Meta:
+        model = Room
+        fields = ['id', 'name', 'description']
+        read_only_fields = ['id']
+        extra_kwargs = {'description': {'required': False, 'allow_blank': True}}
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -27,6 +37,7 @@ class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
         fields = ['id', 'name', 'description', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message']
+        read_only_fields = ['created_by', 'created_at']
 
     def get_member_count(self, obj):
         return obj.members.count()

@@ -1,155 +1,74 @@
-.dashboard {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.02em;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-badge {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.user-badge small {
-  color: var(--text-muted);
-  opacity: 0.8;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg-dark);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--text-muted);
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-
-.btn-outline:hover {
-  color: var(--text);
-  border-color: var(--text-muted);
-}
-
-.dashboard-main {
+.dashboard-welcome {
   flex: 1;
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.rooms-section {
-  background: var(--bg-panel);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  overflow: hidden;
-}
-
-.section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  justify-content: center;
+  padding: 2rem;
+  animation: fadeSlideIn 0.4s ease-out;
 }
 
-.section-header h2 {
-  font-size: 1.1rem;
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 420px;
+}
+
+.welcome-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounceIn 0.5s ease-out 0.1s both;
+}
+
+@keyframes bounceIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.welcome-content h1 {
+  font-size: 1.75rem;
   font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
-.create-room-form {
-  padding: 1.5rem;
+.welcome-subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.welcome-hint {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
-.create-room-form input {
-  padding: 0.6rem 1rem;
-  background: var(--bg-dark);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-}
-
-.form-actions {
+.welcome-hint span {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
-.loading-rooms, .empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.room-list {
-  list-style: none;
-}
-
-.room-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.room-item:last-child {
-  border-bottom: none;
-}
-
-.room-item:hover {
-  background: var(--bg-elevated);
-}
-
-.room-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.room-desc {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.room-meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
+.welcome-hint span::before {
+  content: '•';
+  color: var(--accent);
 }

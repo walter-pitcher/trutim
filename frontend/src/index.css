@@ -40,11 +40,13 @@ button {
   cursor: pointer;
   border: none;
   outline: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 input, textarea {
   font-family: inherit;
   outline: none;
+  transition: border-color 0.2s ease;
 }
 
 a {
@@ -54,4 +56,29 @@ a {
 
 a:hover {
   color: var(--accent-hover);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg-dark);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.btn-outline:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
 }

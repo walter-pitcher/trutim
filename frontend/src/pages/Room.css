@@ -325,8 +325,8 @@
 
 .message.own {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(124, 58, 237, 0.15) 100%);
-  border-color: rgba(124, 58, 237, 0.35);
+  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(13, 148, 136, 0.12) 100%);
+  border-color: rgba(13, 148, 136, 0.25);
   box-shadow: 0 2px 12px var(--accent-muted);
 }
 

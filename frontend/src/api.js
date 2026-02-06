@@ -43,6 +43,7 @@ export const auth = {
 
 export const users = {
   list: () => API.get('/users/'),
+  get: (id) => API.get(`/users/${id}/`),
   me: () => API.get('/users/me/'),
   updateMe: (data) => API.patch('/users/me/', data),
   uploadAvatar: (file) => {

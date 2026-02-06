@@ -17,6 +17,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+  text-align: center;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: white;
   font-weight: 600;

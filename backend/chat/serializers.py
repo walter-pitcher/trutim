@@ -69,25 +69,51 @@ class UserMinimalSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'title', 'avatar', 'online']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('avatar') and isinstance(data['avatar'], str) and data['avatar'].startswith('http'):
+            data['avatar'] = f"/media/{instance.avatar.name}"
+        return data
+
 
 class RoomCreateSerializer(serializers.ModelSerializer):
-    """Minimal serializer for creating rooms - only accepts name and description."""
+    """Serializer for creating rooms - accepts name, description, and optional avatar."""
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = Room
-        fields = ['id', 'name', 'description']
+        fields = ['id', 'name', 'description', 'avatar']
         read_only_fields = ['id']
         extra_kwargs = {'description': {'required': False, 'allow_blank': True}}
+
+    def validate_avatar(self, value):
+        if value is None:
+            return value
+        if value.size > AVATAR_MAX_SIZE:
+            raise serializers.ValidationError('Image must be under 2MB.')
+        if value.content_type not in AVATAR_ALLOWED_TYPES:
+            raise serializers.ValidationError(
+                'Invalid image type. Use JPEG, PNG, GIF, or WebP.'
+            )
+        return value
 
 
 class RoomSerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     dm_user = serializers.SerializerMethodField()
+    created_by = UserMinimalSerializer(read_only=True)
 
     class Meta:
         model = Room
-        fields = ['id', 'name', 'description', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message', 'dm_user']
+        fields = ['id', 'name', 'description', 'avatar', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message', 'dm_user']
         read_only_fields = ['created_by', 'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('avatar') and isinstance(data['avatar'], str) and data['avatar'].startswith('http'):
+            data['avatar'] = f"/media/{instance.avatar.name}"
+        return data
 
     def get_member_count(self, obj):
         return obj.members.count()
@@ -109,6 +135,14 @@ class RoomSerializer(serializers.ModelSerializer):
         if last:
             return {'content': last.content[:50], 'sender': last.sender.username, 'created_at': last.created_at}
         return None
+
+
+class RoomDetailSerializer(RoomSerializer):
+    """Room serializer with members list for detail view."""
+    members = UserMinimalSerializer(many=True, read_only=True)
+
+    class Meta(RoomSerializer.Meta):
+        fields = RoomSerializer.Meta.fields + ['members']
 
 
 class MessageSerializer(serializers.ModelSerializer):

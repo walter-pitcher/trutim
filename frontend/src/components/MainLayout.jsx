@@ -6,8 +6,9 @@ import { useUserStatus } from '../context/UserStatusContext';
 import { rooms, users as usersApi } from '../api';
 import AIPromptPanel from './AIPromptPanel';
 import Avatar from './Avatar';
+import RightSidebar from './RightSidebar';
 import EmojiPicker from './EmojiPicker';
-import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, getStatusIcon } from './icons';
+import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, ChevronLeftIcon, getStatusIcon } from './icons';
 import './Avatar.css';
 import './MainLayout.css';
 
@@ -22,11 +23,12 @@ export default function MainLayout() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRoom, setNewRoom] = useState({ name: '', description: '' });
+  const [newRoom, setNewRoom] = useState({ name: '', description: '', avatar: null });
   const [createError, setCreateError] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [rightSidebarVisible, setRightSidebarVisible] = useState(true);
   const statusEmojiAnchorRef = useRef(null);
 
   useEffect(() => {
@@ -61,27 +63,47 @@ export default function MainLayout() {
   const handleCreateRoom = async (e) => {
     e.preventDefault();
     setCreateError(null);
-    const payload = { name: newRoom.name.trim(), description: (newRoom.description || '').trim() };
-    if (!payload.name) {
+    const name = newRoom.name.trim();
+    const description = (newRoom.description || '').trim();
+    if (!name) {
       setCreateError('Company name is required');
       return;
     }
     try {
-      const { data } = await rooms.create(payload);
+      let data;
+      if (newRoom.avatar) {
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('description', description);
+        formData.append('avatar', newRoom.avatar);
+        const res = await rooms.create(formData);
+        data = res.data;
+      } else {
+        const res = await rooms.create({ name, description });
+        data = res.data;
+      }
       setRoomList((prev) => [data, ...prev]);
-      setNewRoom({ name: '', description: '' });
+      setNewRoom({ name: '', description: '', avatar: null });
       setShowCreateModal(false);
       navigate(`/company/${data.id}`);
     } catch (err) {
       const d = err.response?.data;
-      const msg = d?.name?.[0] ?? d?.description?.[0] ?? d?.detail ?? err.message ?? 'Failed to create company';
+      const msg = d?.name?.[0] ?? d?.description?.[0] ?? d?.avatar?.[0] ?? d?.detail ?? err.message ?? 'Failed to create company';
       setCreateError(typeof msg === 'string' ? msg : String(msg));
     }
   };
 
   const contactUserIdMatch = location.pathname.match(/^\/contact\/(\d+)$/);
+  const companyIdMatch = location.pathname.match(/^\/company\/(\d+)$/);
   const currentContactUserId = contactUserIdMatch ? parseInt(contactUserIdMatch[1], 10) : null;
   const isContactActive = (user) => currentContactUserId === user.id;
+
+  const rightSidebarType = contactUserIdMatch ? 'user' : companyIdMatch ? 'company' : null;
+  const rightSidebarId = contactUserIdMatch?.[1] ?? companyIdMatch?.[1] ?? null;
+
+  useEffect(() => {
+    if (rightSidebarType && rightSidebarId) setRightSidebarVisible(true);
+  }, [rightSidebarType, rightSidebarId]);
 
   return (
     <div className="main-layout">
@@ -95,7 +117,7 @@ export default function MainLayout() {
 
         <button
           className="sidebar-create-btn"
-          onClick={() => { setShowCreateModal(true); setCreateError(null); }}
+          onClick={() => { setShowCreateModal(true); setCreateError(null); setNewRoom({ name: '', description: '', avatar: null }); }}
           title="Create new company"
         >
           <PlusIcon size={18} />
@@ -128,7 +150,15 @@ export default function MainLayout() {
                           to={`/company/${room.id}`}
                           className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
                         >
-                          <HashIcon size={16} className="item-icon" />
+                          {room.avatar ? (
+                            <img
+                              src={room.avatar.startsWith('/') ? room.avatar : `/${room.avatar}`}
+                              alt=""
+                              className="item-icon sidebar-room-avatar"
+                            />
+                          ) : (
+                            <HashIcon size={16} className="item-icon" />
+                          )}
                           <span className="item-name">{room.name}</span>
                           {room.member_count > 0 && (
                             <span className="item-meta">{room.member_count}</span>
@@ -271,8 +301,31 @@ export default function MainLayout() {
           </div>
           </div>
         </header>
-        <div className="main-outlet">
-          <Outlet />
+        <div className="main-area">
+          <div className="main-outlet">
+            <Outlet />
+          </div>
+          {rightSidebarType && rightSidebarId && (
+            <>
+              {rightSidebarVisible ? (
+                <aside className="right-sidebar">
+                  <RightSidebar
+                    type={rightSidebarType}
+                    id={rightSidebarId}
+                    onClose={() => setRightSidebarVisible(false)}
+                  />
+                </aside>
+              ) : (
+                <button
+                  className="right-sidebar-toggle"
+                  onClick={() => setRightSidebarVisible(true)}
+                  title="Show sidebar"
+                >
+                  <ChevronLeftIcon size={18} />
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -284,6 +337,41 @@ export default function MainLayout() {
             <h2>Create Company</h2>
             <form onSubmit={handleCreateRoom}>
               {createError && <p className="create-error">{createError}</p>}
+              <div className="create-company-avatar-wrap">
+                <label className="create-company-avatar-label">Company avatar (optional)</label>
+                <div className="create-company-avatar-row">
+                  <div className="create-company-avatar-preview">
+                    {newRoom.avatar ? (
+                      <img src={URL.createObjectURL(newRoom.avatar)} alt="Preview" />
+                    ) : (
+                      <span className="create-company-avatar-placeholder">?</span>
+                    )}
+                  </div>
+                  <div className="create-company-avatar-btns">
+                    <label className="btn-outline btn-sm">
+                      Choose image
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setNewRoom((r) => ({ ...r, avatar: f }));
+                        }}
+                        hidden
+                      />
+                    </label>
+                    {newRoom.avatar && (
+                      <button
+                        type="button"
+                        className="btn-outline btn-sm"
+                        onClick={() => setNewRoom((r) => ({ ...r, avatar: null }))}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <input
                 placeholder="Company name"
                 value={newRoom.name}

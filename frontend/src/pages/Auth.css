@@ -125,7 +125,7 @@
 
 .auth-error {
   padding: 0.5rem;
-  background: rgba(248, 81, 73, 0.15);
+  background: var(--danger-muted);
   color: var(--danger);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;

@@ -61,7 +61,7 @@
 
 .company-edit-banner {
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(124, 58, 237, 0.08) 100%);
+  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(13, 148, 136, 0.06) 100%);
   border-bottom: 1px solid var(--border);
 }
 
@@ -95,7 +95,7 @@
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--danger-muted);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  border: 1px solid rgba(225, 29, 72, 0.25);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   color: var(--danger);

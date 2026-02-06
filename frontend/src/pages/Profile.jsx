@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { users } from '../api';
+import AvatarUpload from '../components/AvatarUpload';
+import LocationPicker from '../components/LocationPicker';
+import { ArrowLeftIcon } from '../components/icons';
 import './Profile.css';
 
 export default function Profile() {
@@ -14,6 +17,7 @@ export default function Profile() {
     last_name: '',
     title: '',
   });
+  const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -26,6 +30,15 @@ export default function Profile() {
         last_name: user.last_name || '',
         title: user.title || '',
       });
+      if (user.latitude != null && user.longitude != null) {
+        setLocation({
+          lat: parseFloat(user.latitude),
+          lng: parseFloat(user.longitude),
+          address: user.address || '',
+        });
+      } else {
+        setLocation(null);
+      }
     }
   }, [user]);
 
@@ -35,12 +48,28 @@ export default function Profile() {
     setMessage({ type: '', text: '' });
   };
 
+  const handleAvatarUpload = async (file) => {
+    await users.uploadAvatar(file);
+    await refreshUser();
+    setMessage({ type: 'success', text: 'Avatar updated successfully.' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
-      await users.updateMe(form);
+      const payload = { ...form };
+      if (location) {
+        payload.latitude = location.lat;
+        payload.longitude = location.lng;
+        payload.address = location.address || '';
+      } else {
+        payload.latitude = null;
+        payload.longitude = null;
+        payload.address = '';
+      }
+      await users.updateMe(payload);
       await refreshUser();
       setMessage({ type: 'success', text: 'Profile updated successfully.' });
     } catch (err) {
@@ -57,7 +86,9 @@ export default function Profile() {
   return (
     <div className="profile-page">
       <header className="profile-header">
-        <button onClick={() => navigate(-1)} className="btn-back">← Back</button>
+        <button onClick={() => navigate(-1)} className="btn-back">
+          <ArrowLeftIcon size={18} /> Back
+        </button>
         <h1>Profile Settings</h1>
       </header>
 
@@ -68,6 +99,13 @@ export default function Profile() {
               {message.text}
             </div>
           )}
+          <div className="profile-avatar-section">
+            <AvatarUpload
+              user={user}
+              onUpload={handleAvatarUpload}
+              disabled={loading}
+            />
+          </div>
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -116,6 +154,14 @@ export default function Profile() {
               placeholder="e.g. Senior Engineer"
               value={form.title}
               onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>Location</label>
+            <LocationPicker
+              value={location}
+              onChange={setLocation}
+              disabled={loading}
             />
           </div>
           <div className="form-actions">

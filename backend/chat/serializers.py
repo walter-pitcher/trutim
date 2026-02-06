@@ -7,18 +7,45 @@ from .models import Room, Message, CallSession
 
 User = get_user_model()
 
+# Avatar constraints
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2MB
+AVATAR_ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+
 
 class UserSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'title', 'online', 'last_seen']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'title', 'avatar', 'online', 'last_seen',
+                  'latitude', 'longitude', 'address']
         read_only_fields = ['id', 'online', 'last_seen']
+
+    def validate_avatar(self, value):
+        if value is None:
+            return value
+        if value.size > AVATAR_MAX_SIZE:
+            raise serializers.ValidationError('Image must be under 2MB.')
+        if value.content_type not in AVATAR_ALLOWED_TYPES:
+            raise serializers.ValidationError(
+                'Invalid image type. Use JPEG, PNG, GIF, or WebP.'
+            )
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Return relative avatar URL so it works through Vite proxy
+        if data.get('avatar') and isinstance(data['avatar'], str) and data['avatar'].startswith('http'):
+            data['avatar'] = f"/media/{instance.avatar.name}"
+        return data
 
 
 class UserMinimalSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'title', 'online']
+        fields = ['id', 'username', 'first_name', 'last_name', 'title', 'avatar', 'online']
 
 
 class RoomCreateSerializer(serializers.ModelSerializer):

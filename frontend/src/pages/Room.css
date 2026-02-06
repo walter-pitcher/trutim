@@ -22,11 +22,14 @@
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.5rem;
-  background: var(--bg-panel);
+  background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
 }
 
 .btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   background: transparent;
   color: var(--text-muted);
   padding: 0.4rem 0.8rem;
@@ -35,6 +38,12 @@
 
 .btn-back:hover {
   color: var(--text);
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .room-title {
@@ -100,12 +109,12 @@
 
 .message {
   padding: 0.75rem 1rem;
-  background: var(--bg-panel);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   max-width: 85%;
   align-self: flex-start;
-  animation: messageIn 0.2s ease-out;
+  animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes messageIn {
@@ -121,7 +130,7 @@
 
 .message.own {
   align-self: flex-end;
-  background: rgba(88, 166, 255, 0.15);
+  background: var(--accent-muted);
   border-color: var(--accent);
 }
 
@@ -130,6 +139,10 @@
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
+}
+
+.message-header .avatar {
+  flex-shrink: 0;
 }
 
 .msg-title {
@@ -224,7 +237,7 @@
 .message-form input {
   flex: 1;
   padding: 0.75rem 3rem 0.75rem 1rem;
-  background: var(--bg-panel);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
@@ -257,7 +270,7 @@
 .btn-send {
   padding: 0.75rem 1.25rem;
   background: var(--accent);
-  color: var(--bg-dark);
+  color: white;
   font-weight: 600;
   border-radius: var(--radius-sm);
 }
@@ -284,7 +297,7 @@
 }
 
 .video-call-container {
-  background: var(--bg-panel);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -321,7 +334,7 @@
 
 .video-tile {
   position: relative;
-  background: var(--bg-dark);
+  background: var(--bg-primary);
   border-radius: var(--radius-sm);
   overflow: hidden;
   aspect-ratio: 16/9;

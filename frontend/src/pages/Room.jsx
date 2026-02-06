@@ -5,6 +5,9 @@ import { rooms, messages } from '../api';
 import { useChatSocket } from '../hooks/useChatSocket';
 import EmojiPicker from '../components/EmojiPicker';
 import VideoCall from '../components/VideoCall';
+import Avatar from '../components/Avatar';
+import { VideoIcon, ArrowLeftIcon } from '../components/icons';
+import '../components/Avatar.css';
 import './Room.css';
 
 export default function Room() {
@@ -99,7 +102,9 @@ export default function Room() {
       )}
 
       <header className="room-header">
-        <button onClick={() => navigate('/')} className="btn-back">← Back</button>
+        <button onClick={() => navigate('/')} className="btn-back">
+          <ArrowLeftIcon size={18} /> Back
+        </button>
         <div className="room-title">
           <h1>{room.name}</h1>
           <span className={`status ${connected ? 'online' : ''}`}>
@@ -108,7 +113,7 @@ export default function Room() {
         </div>
         <div className="room-actions">
           <button onClick={() => setShowVideoCall(true)} className="btn-icon" title="Video call">
-            📹
+            <VideoIcon size={20} />
           </button>
         </div>
       </header>
@@ -119,6 +124,7 @@ export default function Room() {
             {msgList.map((msg) => (
               <div key={msg.id} className={`message ${msg.sender?.id === user?.id ? 'own' : ''}`}>
                 <div className="message-header">
+                  <Avatar user={msg.sender} size={28} />
                   <strong>{msg.sender?.username}</strong>
                   {msg.sender?.title && <span className="msg-title">{msg.sender.title}</span>}
                   <span className="msg-time">

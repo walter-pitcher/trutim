@@ -8,6 +8,9 @@ const API = axios.create({
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('access');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   return config;
 });
 
@@ -42,6 +45,12 @@ export const users = {
   list: () => API.get('/users/'),
   me: () => API.get('/users/me/'),
   updateMe: (data) => API.patch('/users/me/', data),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return API.patch('/users/me/', formData);
+  },
+  locationStats: () => API.get('/users/location-stats/'),
 };
 
 export const rooms = {

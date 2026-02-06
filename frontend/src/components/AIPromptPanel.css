@@ -143,7 +143,7 @@
 
 .ai-message-user .ai-message-content {
   background: var(--accent);
-  color: var(--bg-dark);
+  color: white;
 }
 
 .ai-message-assistant .ai-message-content {
@@ -167,7 +167,7 @@
 .ai-panel-error {
   padding: 0.75rem 1rem;
   margin: 0 1rem;
-  background: rgba(248, 81, 73, 0.15);
+  background: var(--danger-muted);
   border: 1px solid var(--danger);
   border-radius: var(--radius-sm);
   color: var(--danger);
@@ -188,7 +188,7 @@
 }
 
 .ai-error-dismiss:hover {
-  background: rgba(248, 81, 73, 0.2);
+  background: var(--danger-muted);
 }
 
 .ai-panel-form {

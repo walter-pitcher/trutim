@@ -1,6 +1,7 @@
 """
 Trutim REST API Views
 """
+from collections import defaultdict
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -60,12 +61,31 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         if request.method == 'PATCH':
             serializer = UserSerializer(
-                request.user, data=request.data, partial=True
+                request.user, data=request.data, partial=True, context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
-        return Response(UserSerializer(request.user).data)
+        return Response(UserSerializer(request.user, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'], url_path='location-stats')
+    def location_stats(self, request):
+        """Aggregated user counts by geographic area for the world map."""
+        users_with_location = User.objects.filter(
+            latitude__isnull=False,
+            longitude__isnull=False
+        )
+        buckets = defaultdict(int)
+        for u in users_with_location:
+            lat = float(u.latitude)
+            lng = float(u.longitude)
+            key = (round(lat, 2), round(lng, 2))
+            buckets[key] += 1
+        data = [
+            {'lat': lat, 'lng': lng, 'count': count}
+            for (lat, lng), count in buckets.items()
+        ]
+        return Response({'regions': data, 'total': sum(buckets.values())})
 
 
 class RoomViewSet(viewsets.ModelViewSet):

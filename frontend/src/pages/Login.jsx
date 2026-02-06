@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { SunIcon, MoonIcon } from '../components/icons';
 import './Auth.css';
 
 export default function Login() {
@@ -9,6 +11,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -27,6 +30,14 @@ export default function Login() {
 
   return (
     <div className="auth-page">
+      <button
+        className="auth-theme-toggle"
+        onClick={toggleTheme}
+        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        aria-label="Toggle theme"
+      >
+        {theme === 'dark' ? <SunIcon size={22} /> : <MoonIcon size={22} />}
+      </button>
       <div className="auth-card">
         <div className="auth-header">
           <h1 className="logo-text">

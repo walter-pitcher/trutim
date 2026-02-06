@@ -1,20 +1,62 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
+  --bg-primary: #0f0f12;
+  --bg-secondary: #18181c;
+  --bg-tertiary: #222228;
+  --bg-elevated: #2a2a32;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --border: #2e2e36;
+  --border-focus: #3d3d48;
+  --text: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-muted: rgba(99, 102, 241, 0.2);
+  --success: #22c55e;
+  --success-muted: rgba(34, 197, 94, 0.2);
+  --danger: #ef4444;
+  --danger-muted: rgba(239, 68, 68, 0.2);
+  --warning: #f59e0b;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f4f4f5;
+  --bg-elevated: #e4e4e7;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --border: #e4e4e7;
+  --border-focus: #d4d4d8;
+  --text: #18181b;
+  --text-muted: #52525b;
+  --text-subtle: #71717a;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-muted: rgba(79, 70, 229, 0.15);
+  --success: #16a34a;
+  --success-muted: rgba(22, 163, 74, 0.15);
+  --danger: #dc2626;
+  --danger-muted: rgba(220, 38, 38, 0.15);
+  --warning: #d97706;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* Legacy variable aliases for compatibility */
 :root {
-  --bg-dark: #0d1117;
-  --bg-panel: #161b22;
-  --bg-elevated: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --accent: #58a6ff;
-  --accent-hover: #79b8ff;
-  --success: #3fb950;
-  --danger: #f85149;
-  --warning: #d29922;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow: 0 8px 24px rgba(0,0,0,0.4);
+  --bg-dark: var(--bg-primary);
+  --bg-panel: var(--bg-secondary);
 }
 
 * {
@@ -24,11 +66,12 @@
 }
 
 body {
-  font-family: 'Outfit', system-ui, sans-serif;
-  background: var(--bg-dark);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
   color: var(--text);
   min-height: 100vh;
-  line-height: 1.5;
+  line-height: 1.6;
+  transition: background var(--transition), color var(--transition);
 }
 
 code, .mono {
@@ -40,13 +83,13 @@ button {
   cursor: pointer;
   border: none;
   outline: none;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
 }
 
 input, textarea {
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color var(--transition);
 }
 
 a {
@@ -60,7 +103,7 @@ a:hover {
 
 .btn-primary {
   background: var(--accent);
-  color: var(--bg-dark);
+  color: white;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   font-weight: 500;

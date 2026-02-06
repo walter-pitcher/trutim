@@ -37,6 +37,9 @@
 }
 
 .btn-back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   background: transparent;
   color: var(--text-muted);
   padding: 0.4rem 0.8rem;
@@ -46,6 +49,48 @@
 
 .btn-back:hover {
   color: var(--text);
+}
+
+.profile-avatar-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-wrapper {
+  position: relative;
+}
+
+.profile-avatar {
+  display: block;
+}
+
+.avatar-upload-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--shadow);
+}
+
+.avatar-upload-btn:hover {
+  background: var(--accent-hover);
+  transform: scale(1.02);
+}
+
+.avatar-upload-btn:has(input:disabled) {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .profile-main {
@@ -72,12 +117,12 @@
 }
 
 .profile-message.success {
-  background: rgba(63, 185, 80, 0.15);
+  background: var(--success-muted);
   color: var(--success);
 }
 
 .profile-message.error {
-  background: rgba(248, 81, 73, 0.15);
+  background: var(--danger-muted);
   color: var(--danger);
 }
 
@@ -96,16 +141,18 @@
 .form-group input {
   width: 100%;
   padding: 0.65rem 1rem;
-  background: var(--bg-dark);
+  background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  transition: border-color 0.2s ease;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .form-group input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
 }
+
 
 .form-row {
   display: grid;

@@ -1,0 +1,23 @@
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  transition: transform var(--transition, 0.2s ease);
+}
+
+.avatar:hover {
+  transform: scale(1.02);
+}
+
+.avatar-img {
+  display: block;
+}
+
+.avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: white;
+  font-weight: 600;
+}

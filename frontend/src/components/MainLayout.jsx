@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { rooms, users as usersApi } from '../api';
 import AIPromptPanel from './AIPromptPanel';
+import Avatar from './Avatar';
+import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon } from './icons';
+import './Avatar.css';
 import './MainLayout.css';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [roomList, setRoomList] = useState([]);
@@ -94,12 +99,12 @@ export default function MainLayout() {
           onClick={() => { setShowCreateModal(true); setCreateError(null); }}
           title="Create new room"
         >
-          <span className="create-icon">+</span>
+          <PlusIcon size={18} />
           New Room
         </button>
 
         <div className="sidebar-search">
-          <span className="search-icon">🔍</span>
+          <SearchIcon size={18} className="search-icon-svg" />
           <input
             type="text"
             placeholder="Search users or rooms..."
@@ -124,7 +129,7 @@ export default function MainLayout() {
                         className={`sidebar-item ${isInRoom(location.pathname) && location.pathname === `/room/${room.id}` ? 'active' : ''}`}
                         onClick={() => navigate(`/room/${room.id}`)}
                       >
-                        <span className="item-icon">#</span>
+                        <HashIcon size={16} className="item-icon" />
                         <span className="item-name">{room.name}</span>
                         {room.member_count > 0 && (
                           <span className="item-meta">{room.member_count}</span>
@@ -144,7 +149,7 @@ export default function MainLayout() {
                         className={`sidebar-item ${isInRoom(location.pathname) ? '' : ''}`}
                         onClick={() => handleUserClick(u)}
                       >
-                        <span className="item-avatar">{u.username?.charAt(0)?.toUpperCase() || '?'}</span>
+                        <Avatar user={u} size={28} />
                         <span className="item-name">{u.username}</span>
                         {u.online && <span className="online-dot" title="Online" />}
                       </li>
@@ -164,13 +169,35 @@ export default function MainLayout() {
 
       <div className="main-content">
         <header className="main-header">
-          <div className="header-spacer" />
+          <div className="header-left">
+            <button
+              className={`nav-tab ${location.pathname === '/' ? 'active' : ''}`}
+              onClick={() => navigate('/')}
+            >
+              Dashboard
+            </button>
+            <button
+              className={`nav-tab ${location.pathname === '/map' ? 'active' : ''}`}
+              onClick={() => navigate('/map')}
+            >
+              <GlobeIcon size={16} /> Map
+            </button>
+          </div>
+          <div className="header-right">
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+          </button>
           <button
             className="header-ai-btn"
             onClick={() => setShowAIPanel(true)}
             title="Open AI Assistant"
           >
-            <span className="ai-btn-icon">✨</span>
+            <SparklesIcon size={18} />
             AI
           </button>
           <div className="header-user">
@@ -179,7 +206,7 @@ export default function MainLayout() {
               onClick={() => setShowUserMenu(!showUserMenu)}
               title="Account"
             >
-              <span className="user-avatar">{user?.username?.charAt(0)?.toUpperCase() || '?'}</span>
+              <Avatar user={user} size={32} />
               <span className="user-name">{user?.username}</span>
               {user?.title && <span className="user-title">{user.title}</span>}
               <span className="menu-chevron">▼</span>
@@ -189,14 +216,15 @@ export default function MainLayout() {
                 <div className="menu-backdrop" onClick={() => setShowUserMenu(false)} />
                 <div className="user-dropdown">
                   <button onClick={() => { navigate('/profile'); setShowUserMenu(false); }}>
-                    ⚙️ Profile Settings
+                    <SettingsIcon size={16} /> Profile Settings
                   </button>
                   <button onClick={() => { logout(); setShowUserMenu(false); }} className="logout-btn">
-                    Logout
+                    <LogOutIcon size={16} /> Logout
                   </button>
                 </div>
               </>
             )}
+          </div>
           </div>
         </header>
         <div className="main-outlet">

@@ -11,6 +11,10 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     online = models.BooleanField(default=False)
     last_seen = models.DateTimeField(auto_now=True)
+    # Location: exact coordinates + human-readable address
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    address = models.CharField(max_length=500, blank=True)
 
     class Meta:
         db_table = 'trutim_users'

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUserStatus } from '../context/UserStatusContext';
@@ -27,7 +27,6 @@ export default function MainLayout() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
-  const [contactError, setContactError] = useState(null);
   const statusEmojiAnchorRef = useRef(null);
 
   useEffect(() => {
@@ -46,9 +45,10 @@ export default function MainLayout() {
 
   const filteredRooms = roomList.filter(
     (r) =>
-      !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      (r.description || '').toLowerCase().includes(search.toLowerCase())
+      !r.is_direct &&
+      (!search ||
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
+        (r.description || '').toLowerCase().includes(search.toLowerCase()))
   );
   const filteredUsers = userList.filter(
     (u) =>
@@ -63,7 +63,7 @@ export default function MainLayout() {
     setCreateError(null);
     const payload = { name: newRoom.name.trim(), description: (newRoom.description || '').trim() };
     if (!payload.name) {
-      setCreateError('Room name is required');
+      setCreateError('Company name is required');
       return;
     }
     try {
@@ -71,30 +71,17 @@ export default function MainLayout() {
       setRoomList((prev) => [data, ...prev]);
       setNewRoom({ name: '', description: '' });
       setShowCreateModal(false);
-      navigate(`/room/${data.id}`);
+      navigate(`/company/${data.id}`);
     } catch (err) {
       const d = err.response?.data;
-      const msg = d?.name?.[0] ?? d?.description?.[0] ?? d?.detail ?? err.message ?? 'Failed to create room';
+      const msg = d?.name?.[0] ?? d?.description?.[0] ?? d?.detail ?? err.message ?? 'Failed to create company';
       setCreateError(typeof msg === 'string' ? msg : String(msg));
     }
   };
 
-  const handleUserClick = async (targetUser) => {
-    setContactError(null);
-    try {
-      const { data } = await rooms.dm(targetUser.id);
-      setRoomList((prev) => {
-        const exists = prev.some((r) => r.id === data.id);
-        return exists ? prev : [data, ...prev];
-      });
-      navigate(`/room/${data.id}`);
-    } catch (err) {
-      const msg = err.response?.data?.error ?? err.response?.data?.detail ?? err.message ?? 'Failed to start conversation';
-      setContactError(typeof msg === 'string' ? msg : 'Failed to start conversation');
-    }
-  };
-
-  const isInRoom = (path) => path.startsWith('/room/');
+  const contactUserIdMatch = location.pathname.match(/^\/contact\/(\d+)$/);
+  const currentContactUserId = contactUserIdMatch ? parseInt(contactUserIdMatch[1], 10) : null;
+  const isContactActive = (user) => currentContactUserId === user.id;
 
   return (
     <div className="main-layout">
@@ -109,29 +96,22 @@ export default function MainLayout() {
         <button
           className="sidebar-create-btn"
           onClick={() => { setShowCreateModal(true); setCreateError(null); }}
-          title="Create new room"
+          title="Create new company"
         >
           <PlusIcon size={18} />
-          New Room
+          New Company
         </button>
 
         <div className="sidebar-search">
           <SearchIcon size={18} className="search-icon-svg" />
           <input
             type="text"
-            placeholder="Search users or rooms..."
+            placeholder="Search contacts or companies..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setContactError(null); }}
+            onChange={(e) => setSearch(e.target.value)}
             className="search-input"
           />
         </div>
-
-        {contactError && (
-          <div className="sidebar-contact-error" role="alert">
-            {contactError}
-            <button type="button" onClick={() => setContactError(null)} className="contact-error-dismiss" aria-label="Dismiss">×</button>
-          </div>
-        )}
 
         <div className="sidebar-list">
           {loading ? (
@@ -140,19 +120,20 @@ export default function MainLayout() {
             <>
               {filteredRooms.length > 0 && (
                 <div className="sidebar-section">
-                  <div className="section-label">Rooms</div>
+                  <div className="section-label">Companies</div>
                   <ul className="item-list">
                     {filteredRooms.map((room) => (
-                      <li
-                        key={room.id}
-                        className={`sidebar-item ${isInRoom(location.pathname) && location.pathname === `/room/${room.id}` ? 'active' : ''}`}
-                        onClick={() => navigate(`/room/${room.id}`)}
-                      >
-                        <HashIcon size={16} className="item-icon" />
-                        <span className="item-name">{room.name}</span>
-                        {room.member_count > 0 && (
-                          <span className="item-meta">{room.member_count}</span>
-                        )}
+                      <li key={room.id}>
+                        <NavLink
+                          to={`/company/${room.id}`}
+                          className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        >
+                          <HashIcon size={16} className="item-icon" />
+                          <span className="item-name">{room.name}</span>
+                          {room.member_count > 0 && (
+                            <span className="item-meta">{room.member_count}</span>
+                          )}
+                        </NavLink>
                       </li>
                     ))}
                   </ul>
@@ -163,13 +144,14 @@ export default function MainLayout() {
                   <div className="section-label">Contacts</div>
                   <ul className="item-list">
                     {filteredUsers.map((u) => (
-                      <li
-                        key={u.id}
-                        className="sidebar-item"
-                        onClick={() => handleUserClick(u)}
-                      >
-                        <Avatar user={u} size={28} />
-                        <span className="item-name">{u.username}</span>
+                      <li key={u.id}>
+                        <NavLink
+                          to={`/contact/${u.id}`}
+                          className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        >
+                          <Avatar user={u} size={28} />
+                          <span className="item-name">{u.username}</span>
+                        </NavLink>
                       </li>
                     ))}
                   </ul>
@@ -177,7 +159,7 @@ export default function MainLayout() {
               )}
               {!loading && filteredRooms.length === 0 && filteredUsers.length === 0 && (
                 <div className="sidebar-empty">
-                  {search ? 'No results found' : 'No rooms or contacts yet'}
+                  {search ? 'No results found' : 'No companies or contacts yet'}
                 </div>
               )}
             </>
@@ -299,11 +281,11 @@ export default function MainLayout() {
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create Room</h2>
+            <h2>Create Company</h2>
             <form onSubmit={handleCreateRoom}>
               {createError && <p className="create-error">{createError}</p>}
               <input
-                placeholder="Room name"
+                placeholder="Company name"
                 value={newRoom.name}
                 onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
                 required

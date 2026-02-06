@@ -42,8 +42,8 @@
 }
 
 .logo-icon {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
 }
 
@@ -193,6 +193,13 @@
   transition: all var(--transition);
   margin: 0 0.5rem;
   border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  text-decoration: none;
+  color: inherit;
+}
+
+a.sidebar-item {
+  color: var(--text);
 }
 
 .sidebar-item:hover {
@@ -201,6 +208,14 @@
 
 .sidebar-item.active {
   background: var(--accent-muted);
+  color: var(--accent);
+  box-shadow: inset 4px 0 0 0 var(--accent);
+  font-weight: 600;
+  border: 1px solid var(--accent);
+}
+
+.sidebar-item.active .item-icon,
+.sidebar-item.active .item-meta {
   color: var(--accent);
 }
 
@@ -313,6 +328,8 @@
 }
 
 .main-header {
+  position: relative;
+  z-index: 200;
   height: 60px;
   padding: 0 1.5rem;
   background: var(--bg-secondary);
@@ -437,7 +454,7 @@
 .menu-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 99;
+  z-index: 199;
 }
 
 .user-dropdown {
@@ -449,7 +466,7 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
   padding: 0.25rem;
-  z-index: 100;
+  z-index: 200;
   min-width: 200px;
   animation: dropdownIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

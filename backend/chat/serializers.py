@@ -60,14 +60,27 @@ class RoomCreateSerializer(serializers.ModelSerializer):
 class RoomSerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
+    dm_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Room
-        fields = ['id', 'name', 'description', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message']
+        fields = ['id', 'name', 'description', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message', 'dm_user']
         read_only_fields = ['created_by', 'created_at']
 
     def get_member_count(self, obj):
         return obj.members.count()
+
+    def get_dm_user(self, obj):
+        """For DM rooms, return the other user (not the current user)."""
+        if not obj.is_direct:
+            return None
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        other = obj.members.exclude(id=request.user.id).first()
+        if other:
+            return {'id': other.id, 'username': other.username}
+        return None
 
     def get_last_message(self, obj):
         last = obj.messages.order_by('-created_at').first()

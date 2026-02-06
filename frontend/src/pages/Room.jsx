@@ -11,9 +11,11 @@ import { VideoIcon, ArrowLeftIcon } from '../components/icons';
 import '../components/Avatar.css';
 import './Room.css';
 
-export default function Room() {
-  const { id } = useParams();
+export default function Room({ type = 'company' }) {
+  const { id, userId } = useParams();
   const navigate = useNavigate();
+  const roomIdParam = type === 'company' ? id : null;
+  const contactUserId = type === 'contact' ? userId : null;
   const { user } = useAuth();
   const { theme } = useTheme();
   const token = localStorage.getItem('access');
@@ -25,17 +27,25 @@ export default function Room() {
   const [showVideoCall, setShowVideoCall] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const effectiveRoomId = room?.id;
+
   useEffect(() => {
-    rooms.get(id)
-      .then(({ data }) => setRoom(data))
-      .catch(() => navigate('/'));
-  }, [id, navigate]);
+    if (roomIdParam) {
+      rooms.get(roomIdParam)
+        .then(({ data }) => setRoom(data))
+        .catch(() => navigate('/'));
+    } else if (contactUserId) {
+      rooms.dm(contactUserId)
+        .then(({ data }) => setRoom(data))
+        .catch(() => navigate('/'));
+    }
+  }, [roomIdParam, contactUserId, navigate]);
 
   useEffect(() => {
     if (room) {
-      messages.list(id).then(({ data }) => setMsgList(data));
+      messages.list(room.id).then(({ data }) => setMsgList(data));
     }
-  }, [id, room]);
+  }, [room]);
 
   const handleSocketMessage = (data) => {
     if (data.type === 'message') {
@@ -57,7 +67,7 @@ export default function Room() {
     }
   };
 
-  const { connected, send } = useChatSocket(id, token, handleSocketMessage);
+  const { connected, send } = useChatSocket(effectiveRoomId, token, handleSocketMessage);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -87,10 +97,10 @@ export default function Room() {
   if (!room) return <div className="room-loading">Loading...</div>;
 
   return (
-    <div className="room-page" key={id}>
+    <div className="room-page" key={effectiveRoomId}>
       {showVideoCall && (
         <VideoCall
-          roomId={id}
+          roomId={effectiveRoomId}
           token={token}
           user={user}
           onClose={() => setShowVideoCall(false)}
@@ -102,7 +112,7 @@ export default function Room() {
           <ArrowLeftIcon size={18} /> Back
         </button>
         <div className="room-title">
-          <h1>{room.name}</h1>
+          <h1>{type === 'contact' && room.dm_user ? room.dm_user.username : room.name}</h1>
           <span className={`status ${connected ? 'online' : ''}`}>
             {connected ? '● Live' : '○ Connecting...'}
           </span>

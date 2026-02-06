@@ -34,10 +34,10 @@ export default function Dashboard() {
       <div className="welcome-content">
         <h1>Welcome, {user?.username || 'User'}</h1>
         <p className="welcome-subtitle">
-          Select a conversation from the sidebar or create a new room to get started.
+          Select a conversation from the sidebar or create a new company to get started.
         </p>
         <div className="welcome-hint">
-          <span><MessageCircleIcon size={18} /> Create rooms for team collaboration</span>
+          <span><MessageCircleIcon size={18} /> Create companies for team collaboration</span>
           <span><UsersIcon size={18} /> Click contacts to start direct messages</span>
           <span
             className="welcome-hint-link"

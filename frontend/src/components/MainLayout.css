@@ -42,8 +42,8 @@
 }
 
 .logo-icon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
   flex-shrink: 0;
 }
 
@@ -506,6 +506,7 @@ a.sidebar-item {
 
 .main-outlet {
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

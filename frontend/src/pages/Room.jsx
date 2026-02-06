@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -7,7 +7,17 @@ import { useChatSocket } from '../hooks/useChatSocket';
 import MessageInput from '../components/MessageInput';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
-import { VideoIcon, ArrowLeftIcon } from '../components/icons';
+import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon } from '../components/icons';
+
+function formatDateLabel(date) {
+  const d = new Date(date);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+}
 import '../components/Avatar.css';
 import './Room.css';
 
@@ -25,6 +35,8 @@ export default function Room({ type = 'company' }) {
   const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [editingMessage, setEditingMessage] = useState(null);
   const messagesEndRef = useRef(null);
 
   const effectiveRoomId = room?.id;
@@ -50,6 +62,15 @@ export default function Room({ type = 'company' }) {
   const handleSocketMessage = (data) => {
     if (data.type === 'message') {
       setMsgList((prev) => [...prev, data.message]);
+    } else if (data.type === 'message_updated' || data.type === 'message_edited') {
+      if (data.message) {
+        setMsgList((prev) => prev.map((m) => (m.id === data.message.id ? data.message : m)));
+      }
+    } else if (data.type === 'message_deleted') {
+      const deletedId = data.message_id ?? data.id ?? data.message?.id;
+      if (deletedId) {
+        setMsgList((prev) => prev.filter((m) => m.id !== deletedId));
+      }
     } else if (data.type === 'typing') {
       setTypingUsers((prev) => {
         const next = new Set(prev);
@@ -75,15 +96,72 @@ export default function Room({ type = 'company' }) {
 
   const sendMessage = useCallback((text) => {
     if (!text?.trim()) return;
-    send({ type: 'message', content: text.trim() });
+
+    const payload = {
+      type: editingMessage ? 'edit' : 'message',
+      content: text.trim(),
+    };
+
+    if (editingMessage) {
+      payload.id = editingMessage.id;
+    } else if (replyTo) {
+      payload.parent = replyTo.id;
+    }
+
+    send(payload);
     send({ type: 'typing', typing: false });
-  }, [send]);
+
+    if (editingMessage) {
+      setEditingMessage(null);
+    }
+    if (replyTo) {
+      setReplyTo(null);
+    }
+  }, [send, replyTo, editingMessage]);
 
   const handleTyping = useCallback(({ typing }) => {
     send({ type: 'typing', typing: !!typing });
   }, [send]);
 
+  const handleReply = useCallback((message) => {
+    setReplyTo(message);
+    setEditingMessage(null);
+  }, []);
+
+  const handleEdit = useCallback((message) => {
+    setEditingMessage(message);
+    setReplyTo(null);
+    setInput(message.content || '');
+  }, []);
+
+  const handleDelete = useCallback((message) => {
+    if (!message?.id) return;
+    // Let the backend broadcast deletion to all clients
+    send({ type: 'delete', id: message.id });
+  }, [send]);
+
   const quickEmojis = ['👍', '❤️', '😂', '🔥', '👏', '🚀', '💯', '✨'];
+
+  const messageItems = useMemo(() => {
+    const items = [];
+    let lastDate = null;
+    let lastSenderId = null;
+
+    msgList.forEach((msg) => {
+      const msgDate = msg.created_at ? new Date(msg.created_at).toDateString() : null;
+      const showDateSeparator = msgDate && msgDate !== lastDate;
+      const isGrouped = msg.sender?.id === lastSenderId;
+
+      if (showDateSeparator) {
+        items.push({ type: 'date', date: msg.created_at });
+        lastDate = msgDate;
+      }
+      items.push({ type: 'message', message: msg, isGrouped });
+      lastSenderId = msg.sender?.id;
+    });
+
+    return items;
+  }, [msgList]);
 
   const addReaction = async (msgId, emoji) => {
     try {
@@ -114,7 +192,7 @@ export default function Room({ type = 'company' }) {
         <div className="room-title">
           <h1>{type === 'contact' && room.dm_user ? room.dm_user.username : room.name}</h1>
           <span className={`status ${connected ? 'online' : ''}`}>
-            {connected ? '● Live' : '○ Connecting...'}
+            {connected ? 'Live' : 'Connecting...'}
           </span>
           {presence.length > 0 && (
             <span className="presence-count" title={presence.map((u) => u.username).join(', ')}>
@@ -132,34 +210,111 @@ export default function Room({ type = 'company' }) {
       <div className="room-content">
         <div className="messages-panel">
           <div className="messages-list">
-            {msgList.map((msg) => (
-              <div key={msg.id} className={`message ${msg.sender?.id === user?.id ? 'own' : ''}`}>
-                <div className="message-header">
-                  <Avatar user={msg.sender} size={28} showStatus={false} />
-                  <strong>{msg.sender?.username}</strong>
-                  {msg.sender?.title && <span className="msg-title">{msg.sender.title}</span>}
-                  <span className="msg-time">
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+            {msgList.length === 0 && !typingUsers.size && (
+              <div className="chat-empty-state">
+                <div className="chat-empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+                  </svg>
                 </div>
-                <div className="message-body">{msg.content}</div>
-                <div className="message-reactions">
-                  {msg.reactions && Object.entries(msg.reactions).map(([emoji, ids]) => (
-                    <button key={emoji} className="reaction" onClick={() => addReaction(msg.id, emoji)} title="Toggle reaction">
-                      {emoji} {ids.length}
-                    </button>
-                  ))}
-                  <span className="reaction-add" title="Add reaction">
-                    {quickEmojis.slice(0, 5).map((e) => (
-                      <button key={e} onClick={() => addReaction(msg.id, e)} className="reaction-btn">{e}</button>
-                    ))}
-                  </span>
-                </div>
+                <h3>Start the conversation</h3>
+                <p>Send a message to get things going. Use the toolbar for code blocks, links, and more.</p>
+                <span className="chat-empty-hint">Press Enter to send · Shift+Enter for new line</span>
               </div>
-            ))}
+            )}
+            {messageItems.map((item, i) =>
+              item.type === 'date' ? (
+                <div key={`date-${item.date}-${i}`} className="date-separator">
+                  <span>{formatDateLabel(item.date)}</span>
+                </div>
+              ) : (
+                <div
+                  key={item.message.id}
+                  className={`message ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
+                >
+                  {!item.isGrouped && (
+                    <div className="message-header">
+                      <Avatar user={item.message.sender} size={28} showStatus={false} />
+                      <strong>{item.message.sender?.username}</strong>
+                      {item.message.sender?.title && <span className="msg-title">{item.message.sender.title}</span>}
+                      <span className="msg-time" title={new Date(item.message.created_at).toLocaleString()}>
+                        {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+                  {item.isGrouped && (
+                    <span className="msg-time-grouped" title={new Date(item.message.created_at).toLocaleString()}>
+                      {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                  <div className="message-body">{item.message.content}</div>
+                  <div className="message-footer">
+                    <div className="message-reactions">
+                      {item.message.reactions && Object.entries(item.message.reactions).map(([emoji, ids]) => (
+                        <button
+                          key={emoji}
+                          className="reaction"
+                          onClick={() => addReaction(item.message.id, emoji)}
+                          title="Toggle reaction"
+                        >
+                          {emoji} {ids.length}
+                        </button>
+                      ))}
+                      <span className="reaction-add" title="Add reaction">
+                        {quickEmojis.slice(0, 5).map((e) => (
+                          <button
+                            key={e}
+                            onClick={() => addReaction(item.message.id, e)}
+                            className="reaction-btn"
+                          >
+                            {e}
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                    <div className="message-actions">
+                      <button
+                        type="button"
+                        className="message-action-btn"
+                        onClick={() => handleReply(item.message)}
+                        title="Reply"
+                      >
+                        <ReplyIcon size={14} />
+                        <span>Reply</span>
+                      </button>
+                      {item.message.sender?.id === user?.id && (
+                        <>
+                          <button
+                            type="button"
+                            className="message-action-btn"
+                            onClick={() => handleEdit(item.message)}
+                            title="Edit message"
+                          >
+                            <EditIcon size={14} />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="message-action-btn message-action-danger"
+                            onClick={() => handleDelete(item.message)}
+                            title="Delete message"
+                          >
+                            <TrashIcon size={14} />
+                            <span>Delete</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
             {typingUsers.size > 0 && (
               <div className="typing-indicator">
-                {[...typingUsers].join(', ')} typing...
+                <span className="typing-dots">
+                  <span></span><span></span><span></span>
+                </span>
+                <span className="typing-names">{[...typingUsers].join(', ')} typing</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -176,6 +331,10 @@ export default function Room({ type = 'company' }) {
             quickEmojis={quickEmojis}
             onFileUpload={messages.upload}
             theme={theme}
+            replyTo={replyTo}
+            isEditing={!!editingMessage}
+            onCancelReply={() => setReplyTo(null)}
+            onCancelEdit={() => { setEditingMessage(null); setInput(''); }}
           />
         </div>
       </div>

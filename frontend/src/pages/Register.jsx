@@ -46,7 +46,7 @@ export default function Register() {
       <div className="auth-card">
         <div className="auth-header">
           <h1 className="logo-text">
-            <img src="/trutim-icon.svg" alt="Trutim" className="logo-icon" />
+            <img src="/trutim.png" alt="Trutim" className="logo-icon" />
             Trutim
           </h1>
           <p>Real-time chat, video calls & collaboration for engineers</p>

@@ -88,7 +88,7 @@ export default function MainLayout() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <h1 className="logo-text">
-            <img src="/trutim-icon.svg" alt="Trutim" className="logo-icon" />
+            <img src="/trutim.png" alt="Trutim" className="logo-icon" />
             Trutim
           </h1>
         </div>

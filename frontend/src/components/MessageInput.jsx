@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import EmojiPicker from './EmojiPicker';
-import { CodeIcon, FileIcon, LinkIcon, TypeIcon, SmileIcon, ImageIcon, GitBranchIcon } from './icons';
+import { CodeIcon, FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon } from './icons';
 import './MessageInput.css';
 
 const FONT_SIZES = [
@@ -20,17 +20,27 @@ export default function MessageInput({
   quickEmojis = ['👍', '❤️', '😂', '🔥', '👏', '🚀', '💯', '✨'],
   onFileUpload,
   theme = 'light',
+  replyTo = null,
+  isEditing = false,
+  onCancelReply,
+  onCancelEdit,
 }) {
   const [showEmoji, setShowEmoji] = useState(false);
-  const [showSticker, setShowSticker] = useState(false);
   const [showFontSize, setShowFontSize] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
+  const [calendarTitle, setCalendarTitle] = useState('');
+  const [calendarDate, setCalendarDate] = useState('');
+  const [calendarTime, setCalendarTime] = useState('');
+  const [calendarLocation, setCalendarLocation] = useState('');
   const textareaRef = useRef(null);
   const emojiAnchorRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingDebounceRef = useRef(null);
+
+  const keepFocus = (e) => e.preventDefault();
 
   const notifyTyping = useCallback(() => {
     if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
@@ -136,66 +146,109 @@ export default function MessageInput({
     onTyping?.({ typing: false });
   };
 
+  const buildGoogleCalendarUrl = (title, dateStr, timeStr, location) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hours = 0, minutes = 0] = (timeStr || '00:00').split(':').map(Number);
+    const start = new Date(year, month - 1, day, hours, minutes);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const format = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title || 'Event',
+      dates: `${format(start)}/${format(end)}`,
+    });
+    if (location) params.set('location', location);
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
+  const handleCreateCalendarLink = () => {
+    const title = calendarTitle.trim() || 'Event';
+    const dateStr = calendarDate || new Date().toISOString().slice(0, 10);
+    const timeStr = calendarTime || '09:00';
+    const location = calendarLocation.trim();
+    const url = buildGoogleCalendarUrl(title, dateStr, timeStr, location);
+    const linkText = `${title} - ${dateStr} ${timeStr}`;
+    const toSend = `[📅 ${linkText}](${url})`;
+    onSend?.(toSend);
+    setCalendarTitle('');
+    setCalendarDate('');
+    setCalendarTime('');
+    setCalendarLocation('');
+    setShowCalendarModal(false);
+  };
+
   return (
     <div className="message-input-container">
-      {showToolbar && (
-        <div className="message-toolbar">
-          <button type="button" onClick={insertCode} className="toolbar-btn" title="Code block">
-            <CodeIcon size={18} />
-          </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="toolbar-btn" title="Upload file">
-            <FileIcon size={18} />
-          </button>
-          <input ref={fileInputRef} type="file" multiple className="file-input-hidden" onChange={handleFileSelect} />
-          <button type="button" onClick={() => setShowLinkModal(true)} className="toolbar-btn" title="Insert link">
-            <LinkIcon size={18} />
-          </button>
-          <div className="toolbar-dropdown">
-            <button type="button" onClick={() => setShowFontSize(!showFontSize)} className="toolbar-btn" title="Font size">
-              <TypeIcon size={18} />
-            </button>
-            {showFontSize && (
-              <>
-                <div className="toolbar-backdrop" onClick={() => setShowFontSize(false)} />
-                <div className="toolbar-menu">
-                  {FONT_SIZES.map((fs) => (
-                    <button key={fs.value} type="button" onClick={() => handleFontSize(fs)}>
-                      {fs.label}
-                    </button>
-                  ))}
-                </div>
-              </>
+      {(replyTo || isEditing) && (
+        <div className="message-context-bar">
+          <div className="message-context-main">
+            <span className="message-context-label">
+              {isEditing ? 'Editing message' : 'Replying to'}
+            </span>
+            {!isEditing && replyTo && (
+              <span className="message-context-target">
+                {replyTo.sender?.username || 'message'}
+              </span>
+            )}
+            {!isEditing && replyTo?.content && (
+              <span className="message-context-snippet">
+                {replyTo.content.slice(0, 80)}
+                {replyTo.content.length > 80 ? '…' : ''}
+              </span>
             )}
           </div>
-          <button ref={emojiAnchorRef} type="button" onClick={() => { setShowEmoji(!showEmoji); setShowSticker(false); }} className="toolbar-btn" title="Emoji">
-            <SmileIcon size={18} />
-          </button>
-          <EmojiPicker onSelect={addEmoji} visible={showEmoji} onClose={() => setShowEmoji(false)} anchorRef={emojiAnchorRef} theme={theme} />
-          <button type="button" onClick={() => { setShowSticker(!showSticker); setShowEmoji(false); }} className="toolbar-btn" title="Sticker">
-            <ImageIcon size={18} />
-          </button>
-          {showSticker && (
-            <div className="sticker-picker">
-              <div className="sticker-grid">
-                {['😀', '😎', '🤔', '😍', '🥳', '🤯', '👍', '👋', '🙌', '💪', '🔥', '⭐', '💯', '🚀', '✨', '❤️'].map((s) => (
-                  <button key={s} type="button" onClick={() => { addEmoji(s); setShowSticker(false); }} className="sticker-btn">{s}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          <button type="button" onClick={insertGitBlock} className="toolbar-btn" title="Git block">
-            <GitBranchIcon size={18} />
+          <button
+            type="button"
+            className="message-context-cancel"
+            onClick={isEditing ? onCancelEdit : onCancelReply}
+            aria-label="Cancel reply or edit"
+          >
+            ×
           </button>
         </div>
       )}
-
-      <div className="quick-emojis-row">
-        {quickEmojis.map((e) => (
-          <button key={e} type="button" onClick={() => addEmoji(e)} className="quick-emoji-btn">{e}</button>
-        ))}
-      </div>
-
       <form onSubmit={handleSubmit} className="message-input-form">
+        {showToolbar && (
+          <div className="message-toolbar-inline">
+            <button type="button" onMouseDown={keepFocus} onClick={() => fileInputRef.current?.click()} className="toolbar-btn" title="Attach file">
+              <FileIcon size={18} />
+            </button>
+            <input ref={fileInputRef} type="file" multiple className="file-input-hidden" onChange={handleFileSelect} />
+            <button type="button" onMouseDown={keepFocus} onClick={insertCode} className="toolbar-btn" title="Code block">
+              <CodeIcon size={18} />
+            </button>
+            <button type="button" onMouseDown={keepFocus} onClick={() => setShowLinkModal(true)} className="toolbar-btn" title="Insert link">
+              <LinkIcon size={18} />
+            </button>
+            <button type="button" onMouseDown={keepFocus} onClick={() => setShowCalendarModal(true)} className="toolbar-btn" title="Create calendar link">
+              <CalendarIcon size={18} />
+            </button>
+            <div className="toolbar-dropdown">
+              <button type="button" onMouseDown={keepFocus} onClick={() => setShowFontSize(!showFontSize)} className="toolbar-btn" title="Format">
+                <TypeIcon size={18} />
+              </button>
+              {showFontSize && (
+                <>
+                  <div className="toolbar-backdrop" onClick={() => setShowFontSize(false)} />
+                  <div className="toolbar-menu">
+                    {FONT_SIZES.map((fs) => (
+                      <button key={fs.value} type="button" onMouseDown={keepFocus} onClick={() => handleFontSize(fs)}>
+                        {fs.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <button ref={emojiAnchorRef} type="button" onMouseDown={keepFocus} onClick={() => setShowEmoji(!showEmoji)} className="toolbar-btn" title="Emoji">
+              <SmileIcon size={18} />
+            </button>
+            <EmojiPicker onSelect={addEmoji} visible={showEmoji} onClose={() => setShowEmoji(false)} anchorRef={emojiAnchorRef} theme={theme} />
+            <button type="button" onMouseDown={keepFocus} onClick={insertGitBlock} className="toolbar-btn" title="Git block">
+              <GitBranchIcon size={18} />
+            </button>
+          </div>
+        )}
         <div className="input-wrapper">
           <textarea
             ref={textareaRef}
@@ -213,9 +266,18 @@ export default function MessageInput({
             className="message-textarea"
           />
         </div>
-        <button type="submit" disabled={disabled || !(value || '').trim()} className="btn-send">
-          Send
-        </button>
+        <div className="message-input-actions">
+          {showToolbar && (
+            <div className="quick-emojis-inline">
+              {quickEmojis.slice(0, 4).map((e) => (
+                <button key={e} type="button" onMouseDown={keepFocus} onClick={() => addEmoji(e)} className="quick-emoji-btn" title={`Add ${e}`}>{e}</button>
+              ))}
+            </div>
+          )}
+          <button type="submit" disabled={disabled || !(value || '').trim()} className="btn-send" title="Send (Enter)">
+            <SendArrowIcon size={20} />
+          </button>
+        </div>
       </form>
 
       {showLinkModal && (
@@ -238,6 +300,41 @@ export default function MessageInput({
             <div className="link-modal-actions">
               <button type="button" onClick={() => setShowLinkModal(false)}>Cancel</button>
               <button type="button" onClick={insertLink} disabled={!linkUrl.trim()}>Insert</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCalendarModal && (
+        <div className="link-modal-overlay" onClick={() => setShowCalendarModal(false)}>
+          <div className="link-modal calendar-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Create Calendar Link</h3>
+            <input
+              type="text"
+              placeholder="Event title"
+              value={calendarTitle}
+              onChange={(e) => setCalendarTitle(e.target.value)}
+              autoFocus
+            />
+            <input
+              type="date"
+              value={calendarDate || new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setCalendarDate(e.target.value)}
+            />
+            <input
+              type="time"
+              value={calendarTime || '09:00'}
+              onChange={(e) => setCalendarTime(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Location (optional)"
+              value={calendarLocation}
+              onChange={(e) => setCalendarLocation(e.target.value)}
+            />
+            <div className="link-modal-actions">
+              <button type="button" onClick={() => setShowCalendarModal(false)}>Cancel</button>
+              <button type="button" onClick={handleCreateCalendarLink}>Create & Send</button>
             </div>
           </div>
         </div>

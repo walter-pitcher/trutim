@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const getWsUrl = (path) => {
   const base = window.location.origin.replace(/^http/, 'ws');
-  const apiBase = import.meta.env.DEV ? 'ws://localhost:8000' : base;
+  const apiBase = base;
   return `${apiBase}${path}`;
 };
 

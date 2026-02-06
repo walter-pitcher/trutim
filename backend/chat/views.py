@@ -1,11 +1,14 @@
 """
 Trutim REST API Views
 """
+import os
+import uuid
 from collections import defaultdict
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.files.storage import default_storage
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
@@ -152,6 +155,19 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        """Upload a file for use in messages. Returns the public URL."""
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        ext = os.path.splitext(file.name)[1] or '.bin'
+        path = default_storage.save(f'message_uploads/{uuid.uuid4().hex}{ext}', file)
+        url = default_storage.url(path)
+        if url.startswith('/'):
+            url = request.build_absolute_uri(url)
+        return Response({'url': url, 'filename': file.name})
 
     @action(detail=True, methods=['post'])
     def react(self, request, pk=None):

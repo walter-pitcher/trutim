@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { UserStatusProvider } from './context/UserStatusContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MainLayout from './components/MainLayout';
@@ -21,6 +22,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <UserStatusProvider>
         <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -34,6 +36,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+        </UserStatusProvider>
     </AuthProvider>
     </ThemeProvider>
   );

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { rooms, messages } from '../api';
 import { useChatSocket } from '../hooks/useChatSocket';
-import EmojiPicker from '../components/EmojiPicker';
+import MessageInput from '../components/MessageInput';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
 import { VideoIcon, ArrowLeftIcon } from '../components/icons';
@@ -14,15 +15,15 @@ export default function Room() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const token = localStorage.getItem('access');
   const [room, setRoom] = useState(null);
   const [msgList, setMsgList] = useState([]);
   const [input, setInput] = useState('');
+  const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
-  const [showEmoji, setShowEmoji] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     rooms.get(id)
@@ -46,6 +47,13 @@ export default function Room() {
         else next.delete(data.user?.username);
         return next;
       });
+    } else if (data.type === 'user_joined') {
+      setPresence((prev) => {
+        const exists = prev.some((u) => u?.id === data.user?.id);
+        return exists ? prev : [...prev.filter((u) => u?.id !== data.user?.id), data.user];
+      });
+    } else if (data.type === 'user_left') {
+      setPresence((prev) => prev.filter((u) => u?.id !== data.user?.id));
     }
   };
 
@@ -55,27 +63,15 @@ export default function Room() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgList]);
 
-  const sendMessage = (e) => {
-    e?.preventDefault();
-    const text = input.trim();
-    if (!text) return;
-    send({ type: 'message', content: text });
-    setInput('');
+  const sendMessage = useCallback((text) => {
+    if (!text?.trim()) return;
+    send({ type: 'message', content: text.trim() });
     send({ type: 'typing', typing: false });
-  };
+  }, [send]);
 
-  const handleTyping = () => {
-    send({ type: 'typing', typing: true });
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      send({ type: 'typing', typing: false });
-    }, 2000);
-  };
-
-  const addEmoji = (emoji) => {
-    setInput((prev) => prev + emoji);
-    setShowEmoji(false);
-  };
+  const handleTyping = useCallback(({ typing }) => {
+    send({ type: 'typing', typing: !!typing });
+  }, [send]);
 
   const quickEmojis = ['👍', '❤️', '😂', '🔥', '👏', '🚀', '💯', '✨'];
 
@@ -110,6 +106,11 @@ export default function Room() {
           <span className={`status ${connected ? 'online' : ''}`}>
             {connected ? '● Live' : '○ Connecting...'}
           </span>
+          {presence.length > 0 && (
+            <span className="presence-count" title={presence.map((u) => u.username).join(', ')}>
+              {presence.length} online
+            </span>
+          )}
         </div>
         <div className="room-actions">
           <button onClick={() => setShowVideoCall(true)} className="btn-icon" title="Video call">
@@ -124,7 +125,7 @@ export default function Room() {
             {msgList.map((msg) => (
               <div key={msg.id} className={`message ${msg.sender?.id === user?.id ? 'own' : ''}`}>
                 <div className="message-header">
-                  <Avatar user={msg.sender} size={28} />
+                  <Avatar user={msg.sender} size={28} showStatus={false} />
                   <strong>{msg.sender?.username}</strong>
                   {msg.sender?.title && <span className="msg-title">{msg.sender.title}</span>}
                   <span className="msg-time">
@@ -154,29 +155,18 @@ export default function Room() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="quick-emojis">
-            {quickEmojis.map((e) => (
-              <button key={e} onClick={() => setInput((p) => p + e)} className="quick-emoji">{e}</button>
-            ))}
-          </div>
-
-          <form onSubmit={sendMessage} className="message-form">
-            <div className="input-wrapper">
-              <input
-                value={input}
-                onChange={(e) => { setInput(e.target.value); handleTyping(); }}
-                placeholder="Type a message..."
-                disabled={!connected}
-              />
-              <button type="button" onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); }} className="btn-emoji" title="Emoji">
-                😀
-              </button>
-              <EmojiPicker onSelect={addEmoji} visible={showEmoji} onClose={() => setShowEmoji(false)} />
-            </div>
-            <button type="submit" disabled={!connected || !input.trim()} className="btn-send">
-              Send
-            </button>
-          </form>
+          <MessageInput
+            value={input}
+            onChange={setInput}
+            onSend={sendMessage}
+            onTyping={handleTyping}
+            disabled={!connected}
+            placeholder="Type a message..."
+            showToolbar={true}
+            quickEmojis={quickEmojis}
+            onFileUpload={messages.upload}
+            theme={theme}
+          />
         </div>
       </div>
     </div>

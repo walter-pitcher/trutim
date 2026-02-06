@@ -54,6 +54,14 @@ export default function Room({ type = 'company' }) {
   }, [roomIdParam, contactUserId, navigate]);
 
   useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.id === room?.id) setRoom(e.detail);
+    };
+    window.addEventListener('company-updated', handler);
+    return () => window.removeEventListener('company-updated', handler);
+  }, [room?.id]);
+
+  useEffect(() => {
     if (room) {
       messages.list(room.id).then(({ data }) => setMsgList(data));
     }

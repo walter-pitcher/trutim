@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from .models import Room, Message, CallSession
-from .serializers import UserSerializer, RoomSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
+from .serializers import UserSerializer, RoomSerializer, RoomDetailSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
 
 User = get_user_model()
 
@@ -97,6 +97,8 @@ class RoomViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return RoomCreateSerializer
+        if self.action == 'retrieve':
+            return RoomDetailSerializer
         return RoomSerializer
 
     def get_queryset(self):

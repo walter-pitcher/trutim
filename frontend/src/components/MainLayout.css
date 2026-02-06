@@ -224,6 +224,13 @@ a.sidebar-item {
   flex-shrink: 0;
 }
 
+.sidebar-room-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
 .item-name {
   flex: 1;
   font-size: 0.9rem;
@@ -504,12 +511,42 @@ a.sidebar-item {
   color: var(--danger);
 }
 
-.main-outlet {
+.main-area {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
+}
+
+.main-outlet {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
   flex-direction: column;
+}
+
+.right-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  align-self: stretch;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.right-sidebar-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 /* Modal */
@@ -573,6 +610,59 @@ a.sidebar-item {
   color: var(--danger);
   font-size: 0.9rem;
   margin-bottom: 0.75rem;
+}
+
+.create-company-avatar-wrap {
+  margin-bottom: 1rem;
+}
+
+.create-company-avatar-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.create-company-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.create-company-avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.create-company-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.create-company-avatar-placeholder {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+}
+
+.create-company-avatar-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.create-company-avatar-btns .btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
 }
 
 .modal-actions {

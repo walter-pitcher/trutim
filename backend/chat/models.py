@@ -37,6 +37,7 @@ class Room(models.Model):
     """Chat room / collaboration space."""
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to='room_avatars/', blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_rooms')
     created_at = models.DateTimeField(auto_now_add=True)
     members = models.ManyToManyField(User, related_name='rooms', blank=True)

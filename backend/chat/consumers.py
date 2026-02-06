@@ -2,6 +2,7 @@
 Trutim WebSocket Consumers - Live Chat & WebRTC Signaling
 """
 import json
+from django.utils import timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -46,11 +47,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if msg_type == 'message':
             content = data.get('content', '').strip()
             if content:
-                msg = await self.save_message(content)
+                parent_id = data.get('parent')
+                msg = await self.save_message(content, parent_id=parent_id)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {'type': 'chat_message', 'message': msg}
                 )
+        elif msg_type == 'edit':
+            msg_id = data.get('id')
+            content = data.get('content', '').strip()
+            if msg_id and content:
+                updated = await self.edit_message(msg_id, content)
+                if updated:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {'type': 'chat_message_edited', 'message': updated}
+                    )
+        elif msg_type == 'delete':
+            msg_id = data.get('id')
+            if msg_id:
+                deleted = await self.delete_message(msg_id)
+                if deleted:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {'type': 'chat_message_deleted', 'message_id': msg_id}
+                    )
         elif msg_type == 'typing':
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -59,6 +80,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({'type': 'message', 'message': event['message']}))
+
+    async def chat_message_edited(self, event):
+        await self.send(text_data=json.dumps({'type': 'message_edited', 'message': event['message']}))
+
+    async def chat_message_deleted(self, event):
+        await self.send(text_data=json.dumps({'type': 'message_deleted', 'message_id': event['message_id']}))
 
     async def user_joined(self, event):
         await self.send(text_data=json.dumps({'type': 'user_joined', 'user': event['user']}))
@@ -72,17 +99,47 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     @database_sync_to_async
-    def save_message(self, content):
+    def save_message(self, content, parent_id=None):
         from .models import Message, Room
         room = Room.objects.get(id=self.room_id)
-        msg = Message.objects.create(room=room, sender=self.user, content=content)
+        parent = Message.objects.filter(id=parent_id, room=room).first() if parent_id else None
+        msg = Message.objects.create(room=room, sender=self.user, content=content, parent=parent)
         return {
             'id': msg.id,
             'content': msg.content,
+            'parent': parent_id if parent else None,
             'created_at': msg.created_at.isoformat(),
             'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
-            'reactions': msg.reactions
+            'reactions': msg.reactions or {}
         }
+
+    @database_sync_to_async
+    def edit_message(self, msg_id, content):
+        from .models import Message
+        msg = Message.objects.filter(id=msg_id, room_id=self.room_id, sender=self.user).first()
+        if not msg:
+            return None
+        msg.content = content
+        msg.edited_at = timezone.now()
+        msg.save(update_fields=['content', 'edited_at'])
+        return {
+            'id': msg.id,
+            'content': msg.content,
+            'parent': msg.parent_id,
+            'created_at': msg.created_at.isoformat(),
+            'edited_at': msg.edited_at.isoformat() if msg.edited_at else None,
+            'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
+            'reactions': msg.reactions or {}
+        }
+
+    @database_sync_to_async
+    def delete_message(self, msg_id):
+        from .models import Message
+        msg = Message.objects.filter(id=msg_id, room_id=self.room_id, sender=self.user).first()
+        if not msg:
+            return False
+        msg.delete()
+        return True
 
     @database_sync_to_async
     def update_user_online(self, online):

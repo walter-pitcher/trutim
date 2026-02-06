@@ -35,9 +35,10 @@ class Room(models.Model):
 
 
 class Message(models.Model):
-    """Chat message with emoji support."""
+    """Chat message with emoji support and reply threading."""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages')
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)

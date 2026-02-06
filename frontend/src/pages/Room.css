@@ -191,22 +191,65 @@
   min-height: 200px;
 }
 
-.chat-empty-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 1.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-elevated);
-  border-radius: 50%;
-  color: var(--text-muted);
-  opacity: 0.6;
+.chat-empty-illustrations {
+  position: relative;
+  width: 360px;
+  height: 220px;
+  margin-bottom: 2rem;
 }
 
-.chat-empty-icon svg {
-  width: 28px;
-  height: 28px;
+.chat-fun-svg {
+  position: absolute;
+  transition: transform var(--transition);
+}
+
+.chat-fun-svg:hover {
+  transform: scale(1.08);
+}
+
+.chat-bubble-1 {
+  width: 180px;
+  height: 180px;
+  left: 0;
+  top: 20px;
+  animation: chatFloat1 4s ease-in-out infinite;
+}
+
+.chat-bubble-2 {
+  width: 160px;
+  height: 160px;
+  right: 0;
+  top: 30px;
+  animation: chatFloat2 4s ease-in-out infinite 0.5s;
+}
+
+.chat-sparkle {
+  width: 100px;
+  height: 100px;
+  left: 50%;
+  top: 0;
+  margin-left: -50px;
+  animation: chatSparkle 3s ease-in-out infinite 1s;
+}
+
+.chat-sparkle:hover {
+  animation: none;
+  transform: scale(1.15);
+}
+
+@keyframes chatFloat1 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes chatFloat2 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes chatSparkle {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
 }
 
 .chat-empty-state h3 {

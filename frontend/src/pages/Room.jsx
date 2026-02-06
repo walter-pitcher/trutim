@@ -212,9 +212,42 @@ export default function Room({ type = 'company' }) {
           <div className="messages-list">
             {msgList.length === 0 && !typingUsers.size && (
               <div className="chat-empty-state">
-                <div className="chat-empty-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
+                <div className="chat-empty-illustrations">
+                  <svg className="chat-fun-svg chat-bubble-1" viewBox="0 0 200 200" aria-hidden>
+                    <defs>
+                      <linearGradient id="chat-bubble-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--accent)" />
+                        <stop offset="100%" stopColor="var(--accent-hover)" />
+                      </linearGradient>
+                    </defs>
+                    <ellipse cx="100" cy="95" rx="70" ry="55" fill="url(#chat-bubble-grad1)" opacity="0.25" />
+                    <path d="M55 95 Q55 140 100 140 Q145 140 145 95 Q145 50 100 50 Q55 50 55 95Z" fill="url(#chat-bubble-grad1)" opacity="0.4" />
+                    <circle cx="75" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
+                    <circle cx="100" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
+                    <circle cx="125" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
+                    <path d="M85 115 Q100 130 115 115" stroke="var(--text-muted)" strokeWidth="4" fill="none" opacity="0.5" strokeLinecap="round" />
+                  </svg>
+                  <svg className="chat-fun-svg chat-bubble-2" viewBox="0 0 200 200" aria-hidden>
+                    <defs>
+                      <linearGradient id="chat-bubble-grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="var(--accent-hover)" />
+                        <stop offset="100%" stopColor="var(--accent)" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M40 80 Q40 50 80 50 L120 50 Q160 50 160 80 L160 120 Q160 150 120 150 L80 150 L60 170 Z" fill="url(#chat-bubble-grad2)" opacity="0.35" />
+                    <circle cx="80" cy="95" r="12" fill="var(--accent)" opacity="0.5" />
+                    <circle cx="120" cy="95" r="12" fill="var(--accent)" opacity="0.5" />
+                    <path d="M70 125 Q100 145 130 125" stroke="var(--accent)" strokeWidth="6" fill="none" opacity="0.6" strokeLinecap="round" />
+                  </svg>
+                  <svg className="chat-fun-svg chat-sparkle" viewBox="0 0 200 200" aria-hidden>
+                    <defs>
+                      <linearGradient id="chat-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#fbbf24" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M100 30 L108 90 L170 98 L108 106 L100 170 L92 106 L30 98 L92 90 Z" fill="url(#chat-sparkle-grad)" opacity="0.5" />
+                    <path d="M100 50 L104 85 L140 89 L104 93 L100 130 L96 93 L60 89 L96 85 Z" fill="#fef3c7" opacity="0.7" />
                   </svg>
                 </div>
                 <h3>Start the conversation</h3>

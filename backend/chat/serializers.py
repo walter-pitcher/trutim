@@ -94,7 +94,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'room', 'sender', 'content', 'created_at', 'edited_at', 'reactions']
+        fields = ['id', 'room', 'sender', 'parent', 'content', 'created_at', 'edited_at', 'reactions']
 
 
 class CallSessionSerializer(serializers.ModelSerializer):

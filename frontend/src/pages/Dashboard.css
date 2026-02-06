@@ -5,13 +5,188 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  animation: fadeSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100%;
+  position: relative;
+  overflow: hidden;
+  animation: fadeSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dashboard-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: glowPulse 8s ease-in-out infinite;
+}
+
+.dashboard-glow-1 {
+  width: 400px;
+  height: 400px;
+  background: var(--accent);
+  top: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation-delay: 0s;
+}
+
+.dashboard-glow-2 {
+  width: 300px;
+  height: 300px;
+  background: var(--accent-hover);
+  bottom: 10%;
+  left: 20%;
+  animation-delay: -2s;
+}
+
+.dashboard-glow-3 {
+  width: 250px;
+  height: 250px;
+  background: var(--accent);
+  bottom: 20%;
+  right: 15%;
+  animation-delay: -4s;
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.5; transform: translateX(-50%) scale(1.1); }
+}
+
+.dashboard-glow-2,
+.dashboard-glow-3 {
+  animation-name: glowPulseAlt;
+}
+
+@keyframes glowPulseAlt {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.45; }
+}
+
+/* Logo with scale animation */
+.logo-3d-container {
+  margin-bottom: 2rem;
+  animation: floatIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.logo-3d-inner {
+  animation: logoScaleTo1 0.3s ease-out forwards;
+}
+
+.logo-3d-inner:hover {
+  animation: logoScaleTo108 0.3s ease-out forwards;
+}
+
+@keyframes logoScaleTo1 {
+  from { transform: scale(1.08); }
+  to { transform: scale(1); }
+}
+
+@keyframes logoScaleTo108 {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.logo-3d-img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 32px var(--accent-muted));
+}
+
+.dashboard-hero {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.dashboard-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fadeSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+}
+
+.welcome-subtitle {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1.7;
+  max-width: 420px;
+  margin: 0 auto;
+  animation: fadeSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.dashboard-cards {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  max-width: 560px;
+}
+
+.dashboard-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  transition: all var(--transition);
+  animation: fadeSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.dashboard-card:nth-child(1) { animation-delay: 0.45s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.55s; }
+.dashboard-card:nth-child(3) { animation-delay: 0.65s; }
+
+.dashboard-card:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-focus);
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.dashboard-card-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.dashboard-card-action {
+  cursor: pointer;
+}
+
+.dashboard-card-action:hover {
+  border-color: var(--accent);
+  color: var(--accent) !important;
+}
+
+.dashboard-card-action:hover .dashboard-card-icon {
+  color: var(--accent-hover);
 }
 
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -19,73 +194,13 @@
   }
 }
 
-.welcome-illustration {
-  margin-bottom: 1.5rem;
-  animation: floatIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
-}
-
-.welcome-svg {
-  width: 160px;
-  height: 128px;
-  filter: drop-shadow(0 4px 20px var(--accent-muted));
-}
-
 @keyframes floatIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.9);
+    transform: translateY(24px) scale(0.92);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.welcome-content {
-  text-align: center;
-  max-width: 440px;
-  animation: fadeSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
-}
-
-.welcome-content h1 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.02em;
-}
-
-.welcome-subtitle {
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.welcome-hint {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
-.welcome-hint span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.welcome-hint span svg {
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.welcome-hint-link {
-  cursor: pointer;
-  transition: color var(--transition);
-}
-
-.welcome-hint-link:hover {
-  color: var(--accent) !important;
 }

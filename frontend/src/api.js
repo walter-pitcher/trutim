@@ -62,6 +62,7 @@ export const users = {
 export const rooms = {
   list: () => API.get('/rooms/'),
   create: (data) => API.post('/rooms/', data),
+  update: (id, data) => API.patch(`/rooms/${id}/`, data),
   dm: (userId) => API.post('/rooms/dm/', { user_id: userId }),
   get: (id) => API.get(`/rooms/${id}/`),
   join: (id) => API.post(`/rooms/${id}/join/`),

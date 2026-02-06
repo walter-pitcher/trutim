@@ -97,6 +97,8 @@ class RoomViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return RoomCreateSerializer
+        if self.action in ('update', 'partial_update'):
+            return RoomCreateSerializer
         if self.action == 'retrieve':
             return RoomDetailSerializer
         return RoomSerializer
@@ -107,6 +109,20 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         room = serializer.save(created_by=self.request.user)
         room.members.add(self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        """Only allow company (non-direct) room updates by the owner."""
+        instance = self.get_object()
+        if not instance.is_direct and instance.created_by_id != request.user.id:
+            return Response({'detail': 'Only the company owner can edit.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Only allow company (non-direct) room updates by the owner."""
+        instance = self.get_object()
+        if not instance.is_direct and instance.created_by_id != request.user.id:
+            return Response({'detail': 'Only the company owner can edit.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
 
     @action(detail=False, methods=['post'])
     def dm(self, request):

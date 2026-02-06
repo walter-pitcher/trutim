@@ -313,6 +313,11 @@ export default function MainLayout() {
                     type={rightSidebarType}
                     id={rightSidebarId}
                     onClose={() => setRightSidebarVisible(false)}
+                    currentUserId={user?.id}
+                    onCompanyUpdate={(updated) => {
+                      setRoomList((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+                      window.dispatchEvent(new CustomEvent('company-updated', { detail: updated }));
+                    }}
                   />
                 </aside>
               ) : (

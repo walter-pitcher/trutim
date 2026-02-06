@@ -1,11 +1,28 @@
+<div align="center">
+
 # Trutim
 
-**Real-time collaboration platform for engineers and developers.** A full-stack application providing live messaging, video conferencing, and screen sharing—built with Django Channels (WebSockets) and WebRTC.
+<img src="frontend/public/trutim.svg" alt="Trutim Logo" width="180" height="180">
+
+### *Where engineers collaborate in real time—no more "did you get my message?"*
+
+**A full-stack real-time collaboration platform** built for developers who value instant communication. Trutim combines live messaging, WebRTC video conferencing, screen sharing, and an AI assistant—all powered by Django Channels and modern React.
+
+<p>
+  <img src="docs/assets/coding-robot.svg" alt="Built for developers" width="70" height="70">
+  <img src="docs/assets/realtime-rocket.svg" alt="Real-time speed" width="70" height="70">
+  <img src="docs/assets/chat-lightning.svg" alt="Lightning chat" width="70" height="70">
+  <img src="docs/assets/video-call.svg" alt="Video calls" width="70" height="70">
+  <img src="docs/assets/ai-brain.svg" alt="AI assistant" width="70" height="70">
+</p>
+
+</div>
 
 ---
 
 ## Table of Contents
 
+- [Overview](#overview)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
@@ -19,17 +36,37 @@
 
 ---
 
+## Overview
+
+Trutim is a **professional-grade collaboration platform** designed specifically for engineering teams and developers. Whether you're pair programming across time zones, conducting stand-ups, or debugging together—Trutim keeps everyone in sync with sub-second message delivery and crystal-clear video calls.
+
+Built on a solid foundation of **Django Channels** (WebSockets) and **WebRTC**, the platform eliminates the friction of traditional communication tools. Messages appear instantly. Video connects peer-to-peer. And when you need a coding buddy, the in-app AI assistant is just one click away.
+
+---
+
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Live Chat** | Real-time messaging via WebSockets with instant delivery |
-| **Video Calls** | WebRTC-based peer-to-peer video conferencing |
-| **Screen Sharing** | Share your screen during active video calls |
-| **Emoji Support** | Quick emoji bar, full emoji picker, and message reactions |
-| **User Profiles** | Custom profiles with username, email, and professional title |
-| **Room Management** | Create and join chat rooms with persistent message history |
-| **AI Assistant** | In-app AI chat panel powered by Vercel AI SDK and OpenAI (streaming) |
+<img src="docs/assets/chat-lightning.svg" alt="Lightning-fast chat" width="80" height="80" align="right">
+
+### Live Chat
+Real-time messaging powered by WebSockets—no polling, no refresh. Messages are delivered instantly to all participants in a room. Supports persistent history, so you never lose context when rejoining a conversation.
+
+### Video Calls
+WebRTC-based peer-to-peer video conferencing with minimal latency. Start a call from any chat room; no external meeting links required. Built-in screen sharing lets you share your IDE, terminal, or browser during active calls.
+
+### Emoji & Reactions
+Express yourself with a quick emoji bar, full emoji picker, and message reactions. Because sometimes a 👍 says more than a paragraph.
+
+### User Profiles
+Custom profiles with username, email, and professional title. Upload avatars and manage your presence across the platform.
+
+### Room Management
+Create and join chat rooms with ease. Each room maintains its own message history and participant list. Organize by project, team, or topic.
+
+<img src="docs/assets/ai-brain.svg" alt="AI Assistant" width="80" height="80" align="right">
+
+### AI Assistant
+An in-app AI chat panel powered by the **Vercel AI SDK** and **OpenAI** (streaming). Ask questions, get code suggestions, or brainstorm—without leaving the app. Optional; enable with your OpenAI API key.
 
 ---
 
@@ -84,7 +121,7 @@ pip install -r requirements.txt
 
 **Option A: SQLite (default, no setup required)**
 
-The project uses SQLite by default for development. No additional configuration needed.
+The project uses SQLite by default for development. No additional configuration needed—perfect for getting started quickly.
 
 **Option B: PostgreSQL**
 
@@ -217,6 +254,8 @@ sean/
 │   │   └── api.js            # Axios API client
 │   ├── package.json
 │   └── vite.config.js
+├── docs/
+│   └── assets/               # README illustrations
 ├── docker-compose.yml        # PostgreSQL service
 └── README.md
 ```
@@ -248,6 +287,8 @@ Base URL: `http://localhost:8001/api` (or your backend host)
 ---
 
 ## WebSocket Endpoints
+
+<img src="docs/assets/realtime-rocket.svg" alt="Real-time rocket" width="60" height="60" align="right">
 
 | Endpoint | Purpose |
 |----------|---------|

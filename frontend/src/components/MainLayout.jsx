@@ -3,12 +3,13 @@ import { useNavigate, useLocation, Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUserStatus } from '../context/UserStatusContext';
+import { usePresence } from '../context/PresenceContext';
 import { rooms, users as usersApi } from '../api';
 import AIPromptPanel from './AIPromptPanel';
 import Avatar from './Avatar';
 import RightSidebar from './RightSidebar';
 import EmojiPicker from './EmojiPicker';
-import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, ChevronLeftIcon, getStatusIcon } from './icons';
+import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, ChevronLeftIcon, MenuIcon, XIcon, MessageCircleIcon, getStatusIcon } from './icons';
 import './Avatar.css';
 import './MainLayout.css';
 
@@ -16,6 +17,7 @@ export default function MainLayout() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { status: userStatus, setStatusType, setStatusEmoji, setAuto, manualOverride } = useUserStatus();
+  const { getStatus: getPresenceStatus } = usePresence();
   const navigate = useNavigate();
   const location = useLocation();
   const [roomList, setRoomList] = useState([]);
@@ -29,6 +31,7 @@ export default function MainLayout() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [rightSidebarVisible, setRightSidebarVisible] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const statusEmojiAnchorRef = useRef(null);
 
   useEffect(() => {
@@ -45,6 +48,30 @@ export default function MainLayout() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { roomId, type, contactUserId } = e.detail || {};
+      if (type === 'company' && roomId) {
+        setRoomList((prev) => {
+          const idx = prev.findIndex((r) => r.id === roomId);
+          if (idx <= 0) return prev;
+          const [r] = prev.splice(idx, 1);
+          return [r, ...prev];
+        });
+      } else if (type === 'contact' && contactUserId) {
+        const uid = parseInt(contactUserId, 10);
+        setUserList((prev) => {
+          const idx = prev.findIndex((u) => u.id === uid);
+          if (idx <= 0) return prev;
+          const [u] = prev.splice(idx, 1);
+          return [u, ...prev];
+        });
+      }
+    };
+    window.addEventListener('room-activity', handler);
+    return () => window.removeEventListener('room-activity', handler);
+  }, []);
+
   const filteredRooms = roomList.filter(
     (r) =>
       !r.is_direct &&
@@ -52,13 +79,26 @@ export default function MainLayout() {
         r.name.toLowerCase().includes(search.toLowerCase()) ||
         (r.description || '').toLowerCase().includes(search.toLowerCase()))
   );
-  const filteredUsers = userList.filter(
-    (u) =>
-      !search ||
-      (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
-      (u.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (u.last_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = userList
+    .filter(
+      (u) =>
+        !search ||
+        (u.username || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.first_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.last_name || '').toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const dmRooms = roomList.filter((r) => r.is_direct && r.dm_user);
+      const lastAt = (userId) => {
+        const dm = dmRooms.find((r) => r.dm_user?.id === userId);
+        const ts = dm?.last_message?.created_at;
+        return ts ? new Date(ts).getTime() : 0;
+      };
+      const ta = lastAt(a.id);
+      const tb = lastAt(b.id);
+      if (ta !== tb) return tb - ta;
+      return (a.username || '').localeCompare(b.username || '');
+    });
 
   const handleCreateRoom = async (e) => {
     e.preventDefault();
@@ -107,8 +147,11 @@ export default function MainLayout() {
 
   return (
     <div className="main-layout">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
+          <button className="sidebar-close-mobile" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
+            <XIcon size={20} />
+          </button>
           <h1 className="logo-text">
             <img src="/trutim.png" alt="Trutim" className="logo-icon" />
             Trutim
@@ -149,6 +192,7 @@ export default function MainLayout() {
                         <NavLink
                           to={`/company/${room.id}`}
                           className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                          onClick={() => setSidebarOpen(false)}
                         >
                           {room.avatar ? (
                             <img
@@ -173,17 +217,21 @@ export default function MainLayout() {
                 <div className="sidebar-section">
                   <div className="section-label">Contacts</div>
                   <ul className="item-list">
-                    {filteredUsers.map((u) => (
-                      <li key={u.id}>
-                        <NavLink
-                          to={`/contact/${u.id}`}
-                          className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
-                        >
-                          <Avatar user={u} size={28} />
-                          <span className="item-name">{u.username}</span>
-                        </NavLink>
-                      </li>
-                    ))}
+                    {filteredUsers.map((u) => {
+                      const liveStatus = getPresenceStatus(u.id) ?? u.status ?? 'deactive';
+                      return (
+                        <li key={u.id}>
+                          <NavLink
+                            to={`/contact/${u.id}`}
+                            className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                            onClick={() => setSidebarOpen(false)}
+                          >
+                            <Avatar user={{ ...u, status: liveStatus }} size={28} />
+                            <span className="item-name">{u.username}</span>
+                          </NavLink>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -196,21 +244,27 @@ export default function MainLayout() {
           )}
         </div>
       </aside>
+      <div className="sidebar-backdrop" aria-hidden={!sidebarOpen} onClick={() => setSidebarOpen(false)} />
 
       <div className="main-content">
         <header className="main-header">
           <div className="header-left">
+            <button className="sidebar-toggle-mobile" onClick={() => setSidebarOpen(true)} aria-label="Open sidebar">
+              <MenuIcon size={22} />
+            </button>
             <button
               className={`nav-tab ${location.pathname === '/' ? 'active' : ''}`}
               onClick={() => navigate('/')}
             >
-              Dashboard
+              <MessageCircleIcon size={16} className="nav-tab-icon" />
+              <span className="nav-tab-label">Dashboard</span>
             </button>
             <button
               className={`nav-tab ${location.pathname === '/map' ? 'active' : ''}`}
               onClick={() => navigate('/map')}
             >
-              <GlobeIcon size={16} /> Map
+              <GlobeIcon size={16} className="nav-tab-icon" />
+              <span className="nav-tab-label">Map</span>
             </button>
           </div>
           <div className="header-right">
@@ -228,7 +282,7 @@ export default function MainLayout() {
             title="Open AI Assistant"
           >
             <SparklesIcon size={18} />
-            AI
+            <span className="header-ai-label">AI</span>
           </button>
           <div className="header-user">
             <button
@@ -238,8 +292,8 @@ export default function MainLayout() {
             >
               <Avatar user={{ ...user, status: userStatus.type }} size={32} />
               <span className="user-status-emoji" title="Your status">{userStatus.emoji}</span>
-              <span className="user-name">{user?.username}</span>
-              {user?.title && <span className="user-title">{user.title}</span>}
+              <span className="user-name header-user-name">{user?.username}</span>
+              {user?.title && <span className="user-title header-user-title">{user.title}</span>}
               <span className="menu-chevron">▼</span>
             </button>
             {showUserMenu && (
@@ -257,15 +311,19 @@ export default function MainLayout() {
                       >
                         Auto
                       </button>
-                      {['active', 'idle', 'deactive'].map((t) => (
+                      {[
+                        { value: 'active', label: 'Active' },
+                        { value: 'idle', label: 'Idle' },
+                        { value: 'deactive', label: 'Offline' },
+                      ].map(({ value, label }) => (
                         <button
-                          key={t}
+                          key={value}
                           type="button"
-                          className={`status-type-btn ${manualOverride && userStatus.type === t ? 'active' : ''}`}
-                          onClick={() => setStatusType(t)}
-                          title={t.charAt(0).toUpperCase() + t.slice(1)}
+                          className={`status-type-btn ${manualOverride && userStatus.type === value ? 'active' : ''}`}
+                          onClick={() => setStatusType(value)}
+                          title={label}
                         >
-                          {getStatusIcon(t, { size: 12 })}
+                          {getStatusIcon(value, { size: 12 })}
                         </button>
                       ))}
                     </div>

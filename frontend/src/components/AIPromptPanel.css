@@ -260,3 +260,63 @@
 @keyframes aiSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .ai-prompt-panel {
+    width: min(420px, 100%);
+    height: 90vh;
+    max-height: none;
+  }
+
+  .ai-panel-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .ai-panel-form {
+    padding: 0.75rem 1rem;
+  }
+
+  .ai-panel-messages {
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-prompt-panel {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+    border-radius: 0;
+    border-left: 1px solid var(--border);
+  }
+
+  .ai-panel-overlay {
+    align-items: stretch;
+  }
+
+  .ai-panel-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .ai-panel-title {
+    font-size: 1rem;
+  }
+
+  .ai-panel-form {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .ai-panel-input {
+    min-height: 40px;
+    font-size: 0.9rem;
+  }
+
+  .ai-panel-empty {
+    padding: 1.5rem 1rem;
+    font-size: 0.9rem;
+  }
+}

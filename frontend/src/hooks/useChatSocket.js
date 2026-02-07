@@ -8,6 +8,8 @@ const getWsUrl = (path) => {
 export function useChatSocket(roomId, token, onMessage) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
 
   const send = useCallback((data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -27,7 +29,7 @@ export function useChatSocket(roomId, token, onMessage) {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        onMessage?.(data);
+        onMessageRef.current?.(data);
       } catch (_) {}
     };
 

@@ -199,3 +199,70 @@
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .profile-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .profile-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .profile-main {
+    padding: 1rem;
+  }
+
+  .profile-form {
+    padding: 1.5rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .profile-main {
+    padding: 0.75rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .profile-form {
+    padding: 1.25rem;
+  }
+
+  .profile-avatar-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .profile-main {
+    padding: 0.5rem;
+  }
+
+  .profile-form {
+    padding: 1rem;
+  }
+}

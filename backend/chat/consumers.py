@@ -1,5 +1,5 @@
 """
-Trutim WebSocket Consumers - Live Chat & WebRTC Signaling
+Trutim WebSocket Consumers - Live Chat, Presence & WebRTC Signaling
 """
 import json
 from django.utils import timezone
@@ -8,6 +8,74 @@ from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
+
+PRESENCE_GROUP = 'presence'
+
+
+class PresenceConsumer(AsyncWebsocketConsumer):
+    """Global presence WebSocket - tracks user status (active/idle/offline) across the app."""
+
+    async def connect(self):
+        self.user = self.scope.get('user')
+        if not self.user or not self.user.is_authenticated:
+            await self.close()
+            return
+
+        await self.channel_layer.group_add(PRESENCE_GROUP, self.channel_name)
+        await self.accept()
+
+        status = 'active'  # Default when connecting (user is in app)
+        await self.update_user_presence(online=True, status=status)
+        await self.channel_layer.group_send(
+            PRESENCE_GROUP,
+            {'type': 'presence_update', 'user_id': self.user.id, 'status': status, 'online': True}
+        )
+        # Send current presence snapshot to the new user
+        all_presence = await self.get_all_presence()
+        await self.send(text_data=json.dumps({'type': 'presence_snapshot', 'presence': all_presence}))
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'user') and self.user and self.user.is_authenticated:
+            await self.update_user_presence(online=False, status='deactive')
+            await self.channel_layer.group_send(
+                PRESENCE_GROUP,
+                {'type': 'presence_update', 'user_id': self.user.id, 'status': 'deactive', 'online': False}
+            )
+        if hasattr(self, 'channel_name'):
+            await self.channel_layer.group_discard(PRESENCE_GROUP, self.channel_name)
+
+    async def receive(self, text_data):
+        try:
+            data = json.loads(text_data)
+            if data.get('type') == 'status':
+                status = data.get('status', 'active')
+                if status not in ('active', 'idle', 'deactive'):
+                    status = 'active'
+                await self.update_user_presence(online=True, status=status)
+                await self.channel_layer.group_send(
+                    PRESENCE_GROUP,
+                    {'type': 'presence_update', 'user_id': self.user.id, 'status': status, 'online': True}
+                )
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    async def presence_update(self, event):
+        # Broadcast to all (including sender) - each client updates their contact list
+        await self.send(text_data=json.dumps({
+            'type': 'presence_update',
+            'user_id': event['user_id'],
+            'status': event['status'],
+            'online': event['online'],
+        }))
+
+    @database_sync_to_async
+    def update_user_presence(self, online, status):
+        User.objects.filter(id=self.user.id).update(online=online, status=status)
+
+    @database_sync_to_async
+    def get_all_presence(self):
+        users = User.objects.filter(online=True).values('id', 'status', 'online')
+        return {str(u['id']): {'status': u['status'], 'online': u['online']} for u in users}
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -34,10 +102,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if hasattr(self, 'room_group_name'):
             await self.update_user_online(False)
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {'type': 'user_reading_stop', 'user': await self.user_data()}
-            )
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {'type': 'user_left', 'user': await self.user_data()}
@@ -79,17 +143,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'typing':
             await self.channel_layer.group_send(
                 self.room_group_name,
-                {'type': 'user_typing', 'user': await self.user_data(), 'typing': data.get('typing', True)}
-            )
-        elif msg_type == 'reading_start':
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {'type': 'user_reading_start', 'user': await self.user_data()}
-            )
-        elif msg_type == 'reading_stop':
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {'type': 'user_reading_stop', 'user': await self.user_data()}
+                {'type': 'user_typing', 'user': await self.user_data(), 'typing': data.get('typing', True), 'exclude_channel': self.channel_name}
             )
         elif msg_type == 'message_read':
             message_ids = data.get('message_ids', [])
@@ -117,18 +171,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({'type': 'user_left', 'user': event['user']}))
 
     async def user_typing(self, event):
+        if event.get('exclude_channel') == self.channel_name:
+            return  # Don't send typing to sender – only receivers see it
         await self.send(text_data=json.dumps({
             'type': 'typing', 'user': event['user'], 'typing': event['typing']
-        }))
-
-    async def user_reading_start(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'reading_start', 'user': event['user']
-        }))
-
-    async def user_reading_stop(self, event):
-        await self.send(text_data=json.dumps({
-            'type': 'reading_stop', 'user': event['user']
         }))
 
     async def message_read(self, event):

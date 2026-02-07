@@ -111,3 +111,44 @@
   color: var(--text-subtle);
   margin-top: 0.5rem;
 }
+
+@media (max-width: 768px) {
+  .location-picker {
+    margin-bottom: 1rem;
+  }
+
+  .location-map-wrapper {
+    height: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .location-search-form {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .location-display-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .location-map-wrapper {
+    height: 200px;
+  }
+
+  .location-search-form input {
+    padding: 0.6rem 0.9rem;
+  }
+
+  .btn-use-location {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .location-map-wrapper {
+    height: 180px;
+  }
+}

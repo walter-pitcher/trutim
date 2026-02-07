@@ -16,7 +16,7 @@ export default defineConfig({
         target: 'http://localhost:8001',
         changeOrigin: false,
       },
-      '/ws': { target: 'ws://localhost:8001', ws: true },
+      '/ws': { target: 'http://localhost:8001', ws: true },
     },
   },
 })

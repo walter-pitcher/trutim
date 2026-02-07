@@ -23,11 +23,11 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'title', 'avatar', 'online', 'last_seen',
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'title', 'avatar', 'online', 'status', 'last_seen',
                   'latitude', 'longitude', 'address',
                   'github', 'facebook', 'twitter', 'instagram', 'youtube',
                   'gmail', 'telegram', 'discord', 'whatsapp', 'resume']
-        read_only_fields = ['id', 'online', 'last_seen']
+        read_only_fields = ['id', 'online', 'status', 'last_seen']
 
     def validate_avatar(self, value):
         if value is None:
@@ -67,7 +67,7 @@ class UserMinimalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'title', 'avatar', 'online']
+        fields = ['id', 'username', 'first_name', 'last_name', 'title', 'avatar', 'online', 'status']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

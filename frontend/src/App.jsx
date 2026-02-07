@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { UserStatusProvider } from './context/UserStatusContext';
+import { PresenceProvider } from './context/PresenceContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import MainLayout from './components/MainLayout';
@@ -33,7 +34,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+          <Route path="/" element={<ProtectedRoute><PresenceProvider><MainLayout /></PresenceProvider></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="company/:id" element={<CompanyRoom />} />
             <Route path="contact/:userId" element={<ContactRoom />} />

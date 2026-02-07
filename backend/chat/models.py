@@ -10,6 +10,8 @@ class User(AbstractUser):
     title = models.CharField(max_length=100, blank=True)  # e.g. "Senior Engineer"
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     online = models.BooleanField(default=False)
+    STATUS_CHOICES = [('active', 'Active'), ('idle', 'Idle'), ('deactive', 'Offline')]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='deactive')
     last_seen = models.DateTimeField(auto_now=True)
     # Location: exact coordinates + human-readable address
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)

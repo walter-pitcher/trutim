@@ -562,3 +562,70 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .right-sidebar-header {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .right-sidebar-body {
+    padding: 0.75rem 1rem;
+  }
+
+  .right-sidebar-top-bar {
+    padding: 0.75rem 1rem 0;
+  }
+
+  .company-edit-banner {
+    padding: 1rem 1rem;
+  }
+
+  .company-edit-form {
+    padding: 1rem 1rem 1.25rem;
+  }
+
+  .company-edit-heading {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .right-sidebar-header {
+    padding: 0.6rem 0.75rem 0.75rem;
+  }
+
+  .right-sidebar-name {
+    font-size: 1rem;
+  }
+
+  .right-sidebar-body {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .right-sidebar-section {
+    margin-bottom: 1rem;
+  }
+
+  .member-item {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .company-edit-banner {
+    padding: 0.75rem 1rem;
+  }
+
+  .company-edit-form {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .company-edit-field {
+    gap: 0.4rem;
+  }
+
+  .company-edit-save {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}

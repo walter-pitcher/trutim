@@ -324,3 +324,90 @@
   background: var(--bg-hover);
   color: var(--text);
 }
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .message-input-form {
+    gap: 0.4rem;
+  }
+
+  .message-toolbar-inline {
+    flex-wrap: wrap;
+    gap: 0.2rem;
+  }
+
+  .link-modal-overlay .link-modal {
+    min-width: min(320px, calc(100vw - 2rem));
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .message-input-container {
+    padding: 0.5rem 0 0.35rem;
+  }
+
+  .message-input-form {
+    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+  }
+
+  .toolbar-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-toolbar-inline {
+    gap: 0.1rem;
+  }
+
+  .link-modal-overlay {
+    padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+  }
+
+  .link-modal-overlay .link-modal,
+  .link-modal-overlay .calendar-modal {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .message-context-bar {
+    flex-wrap: wrap;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .message-context-main {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .message-context-cancel {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 360px) {
+  .message-input-container {
+    padding: 0.4rem 0 0.25rem;
+  }
+
+  .message-input-form {
+    padding: 0.3rem 0.4rem;
+  }
+
+  .toolbar-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .message-input-form .btn-send {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}

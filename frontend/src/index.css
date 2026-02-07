@@ -76,7 +76,7 @@ html, body {
 }
 
 html {
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 body {
@@ -168,4 +168,55 @@ a:hover {
 
 *::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
+}
+
+/* Responsive breakpoints */
+:root {
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+}
+
+/* Fluid typography - scales between viewport sizes */
+:root {
+  --text-xs: clamp(0.7rem, 1.5vw, 0.75rem);
+  --text-sm: clamp(0.8rem, 1.8vw, 0.9rem);
+  --text-base: clamp(0.9rem, 2vw, 1rem);
+  --text-lg: clamp(1rem, 2.2vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 2.5vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 3vw, 1.5rem);
+  --text-3xl: clamp(1.5rem, 4vw, 2rem);
+}
+
+/* Touch-friendly tap targets for interactive elements */
+@media (pointer: coarse) {
+  .sidebar-toggle-mobile,
+  .sidebar-close-mobile,
+  .sidebar-item,
+  .nav-tab,
+  .theme-toggle,
+  .header-ai-btn,
+  .user-menu-btn {
+    min-height: 44px;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Responsive container utilities */
+.container-sm { max-width: 480px; margin-inline: auto; padding-inline: 1rem; }
+.container-md { max-width: 768px; margin-inline: auto; padding-inline: 1.25rem; }
+.container-lg { max-width: 1024px; margin-inline: auto; padding-inline: 1.5rem; }
+
+/* Improve touch scrolling */
+@media (hover: none) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

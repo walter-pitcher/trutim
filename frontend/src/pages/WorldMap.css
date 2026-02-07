@@ -122,3 +122,69 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  .world-map-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .world-map-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .world-map-header-content {
+    flex-wrap: wrap;
+  }
+
+  .world-map-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .world-map-container {
+    min-height: 300px;
+  }
+
+  .world-map {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .world-map-header {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .world-map-header h1 {
+    font-size: 1rem;
+  }
+
+  .world-map-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .world-map-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .world-map-container {
+    min-height: 250px;
+    min-height: min(60vh, 300px);
+  }
+
+  .world-map {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 360px) {
+  .world-map-header h1 {
+    font-size: 0.95rem;
+  }
+
+  .world-map-container {
+    min-height: 220px;
+  }
+}

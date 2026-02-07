@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { rooms, messages } from '../api';
 import { useChatSocket } from '../hooks/useChatSocket';
+import { notifyNewMessage, requestPermission } from '../utils/notify';
 import MessageInput from '../components/MessageInput';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
@@ -35,13 +36,18 @@ export default function Room({ type = 'company' }) {
   const [input, setInput] = useState('');
   const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
-  const [readingUsers, setReadingUsers] = useState(new Set());
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const messagesEndRef = useRef(null);
+  const messagesStartRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
 
   const effectiveRoomId = room?.id;
+
+  useEffect(() => {
+    requestPermission();
+  }, []);
 
   useEffect(() => {
     if (roomIdParam) {
@@ -65,16 +71,28 @@ export default function Room({ type = 'company' }) {
 
   useEffect(() => {
     if (room) {
-      messages.list(room.id).then(({ data }) => setMsgList(data));
+      messages.list(room.id).then(({ data }) => {
+        const sorted = [...(data || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        setMsgList(sorted);
+      });
     }
   }, [room]);
 
   const handleSocketMessage = (data) => {
     if (data.type === 'message') {
-      setMsgList((prev) => [...prev, data.message]);
+      const msg = data.message;
+      const isFromOthers = msg?.sender?.id !== user?.id;
+      if (isFromOthers) {
+        notifyNewMessage(msg.sender?.username || 'Someone', msg.content, type === 'contact' && room?.dm_user ? room.dm_user.username : room?.name || 'Chat');
+      }
+      setMsgList((prev) => {
+        const withNew = { ...msg, isNew: true };
+        return [...prev.filter((m) => m.id !== msg.id), withNew];
+      });
+      window.dispatchEvent(new CustomEvent('room-activity', { detail: { roomId: room?.id, type, contactUserId } }));
     } else if (data.type === 'message_updated' || data.type === 'message_edited') {
       if (data.message) {
-        setMsgList((prev) => prev.map((m) => (m.id === data.message.id ? data.message : m)));
+        setMsgList((prev) => prev.map((m) => (m.id === data.message.id ? { ...data.message, isNew: m.isNew } : m)));
       }
     } else if (data.type === 'message_deleted') {
       const deletedId = data.message_id ?? data.id ?? data.message?.id;
@@ -82,6 +100,7 @@ export default function Room({ type = 'company' }) {
         setMsgList((prev) => prev.filter((m) => m.id !== deletedId));
       }
     } else if (data.type === 'typing') {
+      if (data.user?.id === user?.id) return; // Don't show typing state for self (only on receiver side)
       setTypingUsers((prev) => {
         const next = new Set(prev);
         if (data.typing) next.add(data.user?.username);
@@ -95,21 +114,6 @@ export default function Room({ type = 'company' }) {
       });
     } else if (data.type === 'user_left') {
       setPresence((prev) => prev.filter((u) => u?.id !== data.user?.id));
-      setReadingUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(data.user?.username);
-        return next;
-      });
-    } else if (data.type === 'reading_start') {
-      if (data.user?.id !== user?.id) {
-        setReadingUsers((prev) => new Set([...prev, data.user?.username]));
-      }
-    } else if (data.type === 'reading_stop') {
-      setReadingUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(data.user?.username);
-        return next;
-      });
     } else if (data.type === 'message_read') {
       const ids = data.message_ids || [];
       const readerId = data.user?.id;
@@ -129,10 +133,6 @@ export default function Room({ type = 'company' }) {
   const { connected, send } = useChatSocket(effectiveRoomId, token, handleSocketMessage);
   const markReadPendingRef = useRef(new Set());
   const markReadTimerRef = useRef(null);
-
-  useEffect(() => {
-    if (connected) send({ type: 'reading_start' });
-  }, [connected, send]);
 
   const flushMarkRead = useCallback(() => {
     if (markReadPendingRef.current.size === 0 || !effectiveRoomId) return;
@@ -172,8 +172,26 @@ export default function Room({ type = 'company' }) {
   }, []);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (msgList.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } else if (msgList.length > 0 && prevMsgCountRef.current === 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+    prevMsgCountRef.current = msgList.length;
   }, [msgList]);
+
+  useEffect(() => {
+    prevMsgCountRef.current = 0;
+  }, [effectiveRoomId]);
+
+  const newMsgIds = useMemo(() => msgList.filter((m) => m.isNew).map((m) => m.id), [msgList]);
+  useEffect(() => {
+    if (newMsgIds.length === 0) return;
+    const timer = setTimeout(() => {
+      setMsgList((prev) => prev.map((msg) => (msg.isNew ? { ...msg, isNew: false } : msg)));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [newMsgIds.join(',')]);
 
   const sendMessage = useCallback((text) => {
     if (!text?.trim()) return;
@@ -294,6 +312,7 @@ export default function Room({ type = 'company' }) {
             <DecorativeSvg variant="compact" />
           </div>
           <div className="messages-list">
+            <div ref={messagesStartRef} />
             {msgList.length === 0 && !typingUsers.size && (
               <div className="chat-empty-state">
                 <div className="chat-empty-illustrations">
@@ -316,8 +335,8 @@ export default function Room({ type = 'company' }) {
                     <path d="M100 50 L104 85 L140 89 L104 93 L100 130 L96 93 L60 89 L96 85 Z" fill="#fef3c7" opacity="0.7" />
                   </svg>
                 </div>
-                <h3>Start the conversation</h3>
-                <p>Send a message to get things going. Use the toolbar for code blocks, links, and more.</p>
+                <h3>Every great conversation begins here</h3>
+                <p>Your first message is waiting. Share code, links, or ideas—whatever moves you forward. Use the toolbar below for formatting and more.</p>
                 <span className="chat-empty-hint">Press Enter to send · Shift+Enter for new line</span>
               </div>
             )}
@@ -329,12 +348,13 @@ export default function Room({ type = 'company' }) {
               ) : (
                 <div
                   key={item.message.id}
-                  className={`message ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
+                  className={`message ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''} ${item.message.isNew ? 'message-new' : ''}`}
                 >
                   {!item.isGrouped && (
                     <div className="message-header">
                       <Avatar user={item.message.sender} size={28} showStatus={false} />
                       <strong>{item.message.sender?.username}</strong>
+                      {item.message.isNew && <span className="message-badge-new">New</span>}
                       {item.message.sender?.title && <span className="msg-title">{item.message.sender.title}</span>}
                       <span className="msg-time" title={new Date(item.message.created_at).toLocaleString()}>
                         {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -344,6 +364,7 @@ export default function Room({ type = 'company' }) {
                   {item.isGrouped && (
                     <span className="msg-time-grouped" title={new Date(item.message.created_at).toLocaleString()}>
                       {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {item.message.isNew && <span className="message-badge-new">New</span>}
                     </span>
                   )}
                   <div className="message-body">{item.message.content}</div>
@@ -373,7 +394,7 @@ export default function Room({ type = 'company' }) {
                     </div>
                     <div className="message-actions">
                       {item.message.sender?.id === user?.id && (
-                        <span className="msg-read-status" title={((item.message.read_by || []).length > 0 ? 'Seen' : 'Sent')}>
+                        <span className="msg-read-status" title={(item.message.read_by || []).length > 0 ? 'Seen by receiver' : 'Sent'}>
                           {(item.message.read_by || []).length > 0 ? (
                             <CheckDoubleIcon size={14} className="msg-read-seen" />
                           ) : (
@@ -423,12 +444,6 @@ export default function Room({ type = 'company' }) {
                   <span></span><span></span><span></span>
                 </span>
                 <span className="typing-names">{[...typingUsers].join(', ')} typing</span>
-              </div>
-            )}
-            {readingUsers.size > 0 && typingUsers.size === 0 && (
-              <div className="reading-indicator">
-                <span className="reading-icon">👁</span>
-                <span className="reading-names">{[...readingUsers].join(', ')} reading</span>
               </div>
             )}
             <div ref={messagesEndRef} />

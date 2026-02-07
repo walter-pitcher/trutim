@@ -1,7 +1,8 @@
 .main-layout {
   display: flex;
   height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
   background: var(--bg-primary);
   animation: layoutFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -723,4 +724,234 @@ a.sidebar-item {
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+/* ========== RESPONSIVE ========== */
+
+/* Sidebar toggle - hidden on desktop */
+.sidebar-toggle-mobile {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+
+.sidebar-toggle-mobile:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.sidebar-close-mobile {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+
+.sidebar-close-mobile:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 299;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+@media (max-width: 1024px) {
+  .main-header {
+    padding: 0 1rem;
+  }
+
+  .header-user-name {
+    display: none;
+  }
+
+  .header-user-title {
+    display: none;
+  }
+
+  .user-menu-btn .menu-chevron {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 300;
+    width: min(320px, 85vw);
+    min-width: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+  }
+
+  .sidebar.sidebar-open ~ .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .main-content {
+    width: 100%;
+  }
+
+  .sidebar-toggle-mobile {
+    display: flex;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .sidebar-close-mobile {
+    display: flex;
+  }
+
+  .main-header {
+    height: 52px;
+    padding: 0 0.75rem;
+  }
+
+  .nav-tab {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .nav-tab .nav-tab-label {
+    display: none;
+  }
+
+  .nav-tab .nav-tab-icon {
+    margin: 0;
+  }
+
+  .theme-toggle,
+  .header-ai-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .header-ai-btn .header-ai-label {
+    display: none;
+  }
+
+  .right-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 250;
+    width: min(320px, 100vw);
+    min-width: 0;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .right-sidebar-toggle {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 240;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .main-area {
+    position: relative;
+  }
+
+  .modal-content {
+    width: 95%;
+    max-width: 400px;
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .main-header {
+    height: 48px;
+    padding: 0 0.5rem;
+  }
+
+  .header-left {
+    gap: 0.25rem;
+  }
+
+  .header-right {
+    gap: 0.35rem;
+  }
+
+  .nav-tab {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .right-sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .user-dropdown {
+    min-width: 200px;
+    right: 0;
+    left: auto;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: flex-start;
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - 2rem);
+    margin: 0.5rem 0;
+  }
 }

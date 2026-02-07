@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { users as usersApi, rooms } from '../api';
+import { usePresence } from '../context/PresenceContext';
 import Avatar from './Avatar';
 import {
   MailIcon,
@@ -13,7 +14,7 @@ import {
 } from './icons';
 import './RightSidebar.css';
 
-function UserInfoPanel({ userId, onClose }) {
+function UserInfoPanel({ userId, onClose, getPresenceStatus }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -60,7 +61,7 @@ function UserInfoPanel({ userId, onClose }) {
       </div>
       <div className="right-sidebar-header">
         <div className="right-sidebar-avatar-wrap">
-          <Avatar user={user} size={72} />
+          <Avatar user={{ ...user, status: (getPresenceStatus && getPresenceStatus(user.id)) ?? user.status ?? 'deactive' }} size={72} />
         </div>
         <h2 className="right-sidebar-name">
           {user.first_name} {user.last_name}
@@ -127,7 +128,7 @@ function UserInfoPanel({ userId, onClose }) {
   );
 }
 
-function CompanyMembersPanel({ companyId, currentUserId, onClose, onCompanyUpdate }) {
+function CompanyMembersPanel({ companyId, currentUserId, onClose, onCompanyUpdate, getPresenceStatus }) {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -370,7 +371,7 @@ function CompanyMembersPanel({ companyId, currentUserId, onClose, onCompanyUpdat
                 role="button"
                 tabIndex={0}
               >
-                <Avatar user={m} size={36} />
+                <Avatar user={{ ...m, status: (getPresenceStatus && getPresenceStatus(m.id)) ?? m.status ?? 'deactive' }} size={36} />
                 <div className="member-info">
                   <span className="member-name">{m.username}</span>
                   {m.title && <span className="member-title">{m.title}</span>}
@@ -387,10 +388,11 @@ function CompanyMembersPanel({ companyId, currentUserId, onClose, onCompanyUpdat
 }
 
 export default function RightSidebar({ type, id, onClose, currentUserId, onCompanyUpdate }) {
+  const { getStatus: getPresenceStatus } = usePresence();
   if (!type || !id) return null;
 
   if (type === 'user') {
-    return <UserInfoPanel userId={parseInt(id, 10)} onClose={onClose} />;
+    return <UserInfoPanel userId={parseInt(id, 10)} onClose={onClose} getPresenceStatus={getPresenceStatus} />;
   }
   if (type === 'company') {
     return (
@@ -399,6 +401,7 @@ export default function RightSidebar({ type, id, onClose, currentUserId, onCompa
         currentUserId={currentUserId}
         onClose={onClose}
         onCompanyUpdate={onCompanyUpdate}
+        getPresenceStatus={getPresenceStatus}
       />
     );
   }

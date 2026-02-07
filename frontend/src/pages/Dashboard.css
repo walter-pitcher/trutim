@@ -15,57 +15,19 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
-.dashboard-glow {
+.dashboard-decorative-svg {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: glowPulse 8s ease-in-out infinite;
-}
-
-.dashboard-glow-1 {
-  width: 400px;
-  height: 400px;
-  background: var(--accent);
-  top: -10%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  animation-delay: 0s;
-}
-
-.dashboard-glow-2 {
-  width: 300px;
-  height: 300px;
-  background: var(--accent-hover);
-  bottom: 10%;
-  left: 20%;
-  animation-delay: -2s;
-}
-
-.dashboard-glow-3 {
-  width: 250px;
-  height: 250px;
-  background: var(--accent);
-  bottom: 20%;
-  right: 15%;
-  animation-delay: -4s;
-}
-
-@keyframes glowPulse {
-  0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
-  50% { opacity: 0.5; transform: translateX(-50%) scale(1.1); }
-}
-
-.dashboard-glow-2,
-.dashboard-glow-3 {
-  animation-name: glowPulseAlt;
-}
-
-@keyframes glowPulseAlt {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.45; }
+  transform: translate(-50%, -50%);
+  min-width: 120%;
+  min-height: 120%;
 }
 
 /* Logo with scale animation */
@@ -111,10 +73,7 @@
   font-weight: 700;
   margin-bottom: 0.75rem;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--text) 0%, var(--text-muted) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text);
   animation: fadeSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
 }
 
@@ -161,7 +120,7 @@
   background: var(--bg-elevated);
   border-color: var(--border-focus);
   color: var(--text);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   box-shadow: var(--shadow-lg);
 }
 

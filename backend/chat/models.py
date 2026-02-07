@@ -56,12 +56,24 @@ class Message(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)
+    message_type = models.CharField(max_length=20, default='text', blank=True, null=True)
     # Reactions/emojis stored as JSON: {"👍": ["user1_id"], "❤️": ["user2_id"]}
     reactions = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'trutim_messages'
         ordering = ['created_at']
+
+
+class MessageRead(models.Model):
+    """Tracks which users have read which messages (read receipts)."""
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name='reads')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='message_reads')
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trutim_message_reads'
+        unique_together = [('user', 'message')]
 
 
 class CallSession(models.Model):

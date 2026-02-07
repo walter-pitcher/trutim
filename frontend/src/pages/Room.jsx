@@ -7,7 +7,8 @@ import { useChatSocket } from '../hooks/useChatSocket';
 import MessageInput from '../components/MessageInput';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
-import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon } from '../components/icons';
+import DecorativeSvg from '../components/DecorativeSvg';
+import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CheckIcon, CheckDoubleIcon } from '../components/icons';
 
 function formatDateLabel(date) {
   const d = new Date(date);
@@ -34,6 +35,7 @@ export default function Room({ type = 'company' }) {
   const [input, setInput] = useState('');
   const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
+  const [readingUsers, setReadingUsers] = useState(new Set());
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -93,10 +95,81 @@ export default function Room({ type = 'company' }) {
       });
     } else if (data.type === 'user_left') {
       setPresence((prev) => prev.filter((u) => u?.id !== data.user?.id));
+      setReadingUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(data.user?.username);
+        return next;
+      });
+    } else if (data.type === 'reading_start') {
+      if (data.user?.id !== user?.id) {
+        setReadingUsers((prev) => new Set([...prev, data.user?.username]));
+      }
+    } else if (data.type === 'reading_stop') {
+      setReadingUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(data.user?.username);
+        return next;
+      });
+    } else if (data.type === 'message_read') {
+      const ids = data.message_ids || [];
+      const readerId = data.user?.id;
+      if (ids.length && readerId) {
+        setMsgList((prev) =>
+          prev.map((m) => {
+            if (!ids.includes(m.id)) return m;
+            const readBy = m.read_by || [];
+            if (readBy.includes(readerId)) return m;
+            return { ...m, read_by: [...readBy, readerId] };
+          })
+        );
+      }
     }
   };
 
   const { connected, send } = useChatSocket(effectiveRoomId, token, handleSocketMessage);
+  const markReadPendingRef = useRef(new Set());
+  const markReadTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (connected) send({ type: 'reading_start' });
+  }, [connected, send]);
+
+  const flushMarkRead = useCallback(() => {
+    if (markReadPendingRef.current.size === 0 || !effectiveRoomId) return;
+    const ids = [...markReadPendingRef.current];
+    markReadPendingRef.current.clear();
+    if (connected) {
+      send({ type: 'message_read', message_ids: ids });
+    } else {
+      messages.markRead(effectiveRoomId, ids).catch(() => {});
+    }
+  }, [effectiveRoomId, connected, send]);
+
+  const scheduleMarkRead = useCallback(
+    (msgId) => {
+      if (!msgId || !user?.id) return;
+      markReadPendingRef.current.add(msgId);
+      if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+      markReadTimerRef.current = setTimeout(flushMarkRead, 400);
+    },
+    [flushMarkRead, user?.id]
+  );
+
+  useEffect(() => {
+    if (!room?.id || !user?.id) return;
+    msgList.forEach((msg) => {
+      const alreadyRead = (msg.read_by || []).includes(user.id);
+      if (msg.sender?.id !== user.id && msg.id && !alreadyRead) {
+        scheduleMarkRead(msg.id);
+      }
+    });
+  }, [room?.id, user?.id, msgList, scheduleMarkRead]);
+
+  useEffect(() => {
+    return () => {
+      if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -217,44 +290,29 @@ export default function Room({ type = 'company' }) {
 
       <div className="room-content">
         <div className="messages-panel">
+          <div className="messages-panel-decorative">
+            <DecorativeSvg variant="compact" />
+          </div>
           <div className="messages-list">
             {msgList.length === 0 && !typingUsers.size && (
               <div className="chat-empty-state">
                 <div className="chat-empty-illustrations">
                   <svg className="chat-fun-svg chat-bubble-1" viewBox="0 0 200 200" aria-hidden>
-                    <defs>
-                      <linearGradient id="chat-bubble-grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="var(--accent-hover)" />
-                      </linearGradient>
-                    </defs>
-                    <ellipse cx="100" cy="95" rx="70" ry="55" fill="url(#chat-bubble-grad1)" opacity="0.25" />
-                    <path d="M55 95 Q55 140 100 140 Q145 140 145 95 Q145 50 100 50 Q55 50 55 95Z" fill="url(#chat-bubble-grad1)" opacity="0.4" />
+                    <ellipse cx="100" cy="95" rx="70" ry="55" fill="var(--accent)" opacity="0.25" />
+                    <path d="M55 95 Q55 140 100 140 Q145 140 145 95 Q145 50 100 50 Q55 50 55 95Z" fill="var(--accent)" opacity="0.4" />
                     <circle cx="75" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
                     <circle cx="100" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
                     <circle cx="125" cy="90" r="8" fill="var(--text-muted)" opacity="0.4" />
                     <path d="M85 115 Q100 130 115 115" stroke="var(--text-muted)" strokeWidth="4" fill="none" opacity="0.5" strokeLinecap="round" />
                   </svg>
                   <svg className="chat-fun-svg chat-bubble-2" viewBox="0 0 200 200" aria-hidden>
-                    <defs>
-                      <linearGradient id="chat-bubble-grad2" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="var(--accent-hover)" />
-                        <stop offset="100%" stopColor="var(--accent)" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M40 80 Q40 50 80 50 L120 50 Q160 50 160 80 L160 120 Q160 150 120 150 L80 150 L60 170 Z" fill="url(#chat-bubble-grad2)" opacity="0.35" />
+                    <path d="M40 80 Q40 50 80 50 L120 50 Q160 50 160 80 L160 120 Q160 150 120 150 L80 150 L60 170 Z" fill="var(--accent)" opacity="0.35" />
                     <circle cx="80" cy="95" r="12" fill="var(--accent)" opacity="0.5" />
                     <circle cx="120" cy="95" r="12" fill="var(--accent)" opacity="0.5" />
                     <path d="M70 125 Q100 145 130 125" stroke="var(--accent)" strokeWidth="6" fill="none" opacity="0.6" strokeLinecap="round" />
                   </svg>
                   <svg className="chat-fun-svg chat-sparkle" viewBox="0 0 200 200" aria-hidden>
-                    <defs>
-                      <linearGradient id="chat-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#fbbf24" />
-                        <stop offset="100%" stopColor="#f59e0b" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M100 30 L108 90 L170 98 L108 106 L100 170 L92 106 L30 98 L92 90 Z" fill="url(#chat-sparkle-grad)" opacity="0.5" />
+                    <path d="M100 30 L108 90 L170 98 L108 106 L100 170 L92 106 L30 98 L92 90 Z" fill="#f59e0b" opacity="0.5" />
                     <path d="M100 50 L104 85 L140 89 L104 93 L100 130 L96 93 L60 89 L96 85 Z" fill="#fef3c7" opacity="0.7" />
                   </svg>
                 </div>
@@ -314,6 +372,15 @@ export default function Room({ type = 'company' }) {
                       </span>
                     </div>
                     <div className="message-actions">
+                      {item.message.sender?.id === user?.id && (
+                        <span className="msg-read-status" title={((item.message.read_by || []).length > 0 ? 'Seen' : 'Sent')}>
+                          {(item.message.read_by || []).length > 0 ? (
+                            <CheckDoubleIcon size={14} className="msg-read-seen" />
+                          ) : (
+                            <CheckIcon size={14} className="msg-read-sent" />
+                          )}
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="message-action-btn"
@@ -356,6 +423,12 @@ export default function Room({ type = 'company' }) {
                   <span></span><span></span><span></span>
                 </span>
                 <span className="typing-names">{[...typingUsers].join(', ')} typing</span>
+              </div>
+            )}
+            {readingUsers.size > 0 && typingUsers.size === 0 && (
+              <div className="reading-indicator">
+                <span className="reading-icon">👁</span>
+                <span className="reading-names">{[...readingUsers].join(', ')} reading</span>
               </div>
             )}
             <div ref={messagesEndRef} />

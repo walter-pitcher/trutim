@@ -72,6 +72,8 @@ export const rooms = {
 export const messages = {
   list: (roomId) => API.get('/messages/', { params: { room: roomId } }),
   react: (id, emoji) => API.post(`/messages/${id}/react/`, { emoji }),
+  markRead: (roomId, messageIds) =>
+    API.post('/messages/mark-read/', { room_id: roomId, message_ids: messageIds }),
   upload: (file) => {
     const formData = new FormData();
     formData.append('file', file);

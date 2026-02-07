@@ -300,6 +300,24 @@ export function TrashIcon({ className = '', size = 18 }) {
   );
 }
 
+/** Message read status: single = sent, double = seen */
+export function CheckIcon({ className = '', size = 14 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+export function CheckDoubleIcon({ className = '', size = 14 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 12 11 14 15 10" />
+      <path d="M3 12 5 14 9 10" />
+    </svg>
+  );
+}
+
 /** Status indicators - Active (green), Idle (yellow), Deactive (gray) */
 export function StatusActiveIcon({ className = '', size = 10 }) {
   return (

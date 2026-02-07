@@ -36,6 +36,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.update_user_online(False)
             await self.channel_layer.group_send(
                 self.room_group_name,
+                {'type': 'user_reading_stop', 'user': await self.user_data()}
+            )
+            await self.channel_layer.group_send(
+                self.room_group_name,
                 {'type': 'user_left', 'user': await self.user_data()}
             )
             await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
@@ -77,6 +81,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 self.room_group_name,
                 {'type': 'user_typing', 'user': await self.user_data(), 'typing': data.get('typing', True)}
             )
+        elif msg_type == 'reading_start':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {'type': 'user_reading_start', 'user': await self.user_data()}
+            )
+        elif msg_type == 'reading_stop':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {'type': 'user_reading_stop', 'user': await self.user_data()}
+            )
+        elif msg_type == 'message_read':
+            message_ids = data.get('message_ids', [])
+            if message_ids:
+                marked = await self.mark_messages_read(message_ids)
+                if marked:
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {'type': 'message_read', 'message_ids': marked, 'user': await self.user_data()}
+                    )
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({'type': 'message', 'message': event['message']}))
@@ -98,19 +121,47 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'typing', 'user': event['user'], 'typing': event['typing']
         }))
 
+    async def user_reading_start(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'reading_start', 'user': event['user']
+        }))
+
+    async def user_reading_stop(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'reading_stop', 'user': event['user']
+        }))
+
+    async def message_read(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'message_read', 'message_ids': event['message_ids'], 'user': event['user']
+        }))
+
+    @database_sync_to_async
+    def mark_messages_read(self, message_ids):
+        from .models import Message, MessageRead
+        marked = []
+        for msg in Message.objects.filter(id__in=message_ids, room_id=self.room_id).exclude(sender=self.user):
+            _, created = MessageRead.objects.get_or_create(
+                message=msg, user=self.user, defaults={}
+            )
+            if created:
+                marked.append(msg.id)
+        return marked
+
     @database_sync_to_async
     def save_message(self, content, parent_id=None):
         from .models import Message, Room
         room = Room.objects.get(id=self.room_id)
         parent = Message.objects.filter(id=parent_id, room=room).first() if parent_id else None
-        msg = Message.objects.create(room=room, sender=self.user, content=content, parent=parent)
+        msg = Message.objects.create(room=room, sender=self.user, content=content, parent=parent, message_type='text')
         return {
             'id': msg.id,
             'content': msg.content,
             'parent': parent_id if parent else None,
             'created_at': msg.created_at.isoformat(),
             'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
-            'reactions': msg.reactions or {}
+            'reactions': msg.reactions or {},
+            'read_by': []
         }
 
     @database_sync_to_async
@@ -129,7 +180,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'created_at': msg.created_at.isoformat(),
             'edited_at': msg.edited_at.isoformat() if msg.edited_at else None,
             'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
-            'reactions': msg.reactions or {}
+            'reactions': msg.reactions or {},
+            'read_by': list(msg.reads.values_list('user_id', flat=True))
         }
 
     @database_sync_to_async

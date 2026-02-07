@@ -9,14 +9,14 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8001',
         changeOrigin: false, // Preserve Host so backend builds correct media URLs (e.g. for avatars)
       },
       '/media': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8001',
         changeOrigin: false,
       },
-      '/ws': { target: 'ws://localhost:8002', ws: true },
+      '/ws': { target: 'ws://localhost:8001', ws: true },
     },
   },
 })

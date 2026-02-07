@@ -12,7 +12,7 @@ from django.core.files.storage import default_storage
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
-from .models import Room, Message, CallSession
+from .models import Room, Message, MessageRead, CallSession
 from .serializers import UserSerializer, RoomSerializer, RoomDetailSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
 
 User = get_user_model()
@@ -206,3 +206,23 @@ class MessageViewSet(viewsets.ModelViewSet):
         msg.reactions = reactions
         msg.save()
         return Response(MessageSerializer(msg).data)
+
+    @action(detail=False, methods=['post'], url_path='mark-read')
+    def mark_read(self, request):
+        """Mark messages as read by the current user. Body: { message_ids: [1, 2, 3] }"""
+        message_ids = request.data.get('message_ids', [])
+        if not message_ids:
+            return Response({'marked': []})
+        room_id = request.data.get('room_id')
+        if not room_id:
+            return Response({'error': 'room_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not Room.objects.filter(id=room_id, members=request.user).exists():
+            return Response({'error': 'Not a member of this room'}, status=status.HTTP_403_FORBIDDEN)
+        created = []
+        for msg in Message.objects.filter(id__in=message_ids, room_id=room_id).exclude(sender=request.user):
+            _, created_flag = MessageRead.objects.get_or_create(
+                message=msg, user=request.user, defaults={}
+            )
+            if created_flag:
+                created.append(msg.id)
+        return Response({'marked': created})

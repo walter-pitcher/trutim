@@ -8,6 +8,18 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
+  animation: rightSidebarSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes rightSidebarSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .right-sidebar-panel {
@@ -61,7 +73,7 @@
 
 .company-edit-banner {
   padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(13, 148, 136, 0.06) 100%);
+  background: linear-gradient(135deg, var(--accent-muted) 0%, transparent 100%);
   border-bottom: 1px solid var(--border);
 }
 
@@ -95,7 +107,7 @@
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background: var(--danger-muted);
-  border: 1px solid rgba(225, 29, 72, 0.25);
+  border: 1px solid rgba(248, 81, 73, 0.3);
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   color: var(--danger);
@@ -252,7 +264,7 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.7rem 1.25rem;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  background: var(--accent);
   color: white;
   font-weight: 600;
   font-size: 0.95rem;
@@ -304,8 +316,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -316,7 +328,7 @@
 
 .right-sidebar-close:hover {
   background: var(--bg-hover);
-  color: var(--text);
+  color: var(--danger);
 }
 
 .right-sidebar-loading,
@@ -523,7 +535,7 @@
   padding: 0.6rem 0.75rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background var(--transition);
+  transition: all var(--transition);
 }
 
 .member-item:hover {

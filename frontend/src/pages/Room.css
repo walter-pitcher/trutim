@@ -10,12 +10,18 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  animation: roomFadeIn 0.25s ease-out;
+  animation: roomFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes roomFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .room-header {
@@ -134,9 +140,22 @@
   margin: 0 auto;
   width: 100%;
   padding: 1rem 2rem 1.5rem;
-  background: 
-    radial-gradient(ellipse 80% 50% at 50% 0%, var(--accent-muted) 0%, transparent 50%),
-    var(--bg-primary);
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.messages-panel-decorative {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+.messages-panel-decorative svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .messages-list {
@@ -304,8 +323,8 @@
   border-radius: var(--radius);
   max-width: 78%;
   align-self: flex-start;
-  animation: messageIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: box-shadow var(--transition);
+  animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow var(--transition), transform var(--transition);
 }
 
 .message:hover {
@@ -325,8 +344,8 @@
 
 .message.own {
   align-self: flex-end;
-  background: linear-gradient(135deg, var(--accent-muted) 0%, rgba(13, 148, 136, 0.12) 100%);
-  border-color: rgba(13, 148, 136, 0.25);
+  background: var(--accent-muted);
+  border-color: rgba(37, 99, 235, 0.25);
   box-shadow: 0 2px 12px var(--accent-muted);
 }
 
@@ -374,6 +393,20 @@
   color: var(--text-subtle);
   margin-bottom: 0.25rem;
   font-variant-numeric: tabular-nums;
+}
+
+.msg-read-status {
+  display: inline-flex;
+  margin-left: 0.35rem;
+  color: var(--text-subtle);
+}
+
+.msg-read-status .msg-read-seen {
+  color: var(--accent);
+}
+
+.msg-read-status .msg-read-sent {
+  color: var(--text-subtle);
 }
 
 .message-body {
@@ -507,6 +540,28 @@
 }
 
 .typing-names {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Reading indicator */
+.reading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: fit-content;
+  align-self: flex-start;
+}
+
+.reading-icon {
+  font-size: 0.9rem;
+}
+
+.reading-names {
   font-size: 0.8rem;
   color: var(--text-muted);
 }

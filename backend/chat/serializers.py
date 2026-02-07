@@ -3,7 +3,7 @@ Trutim API Serializers
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Room, Message, CallSession
+from .models import Room, Message, MessageRead, CallSession
 
 User = get_user_model()
 
@@ -147,10 +147,15 @@ class RoomDetailSerializer(RoomSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserMinimalSerializer(read_only=True)
+    read_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ['id', 'room', 'sender', 'parent', 'content', 'created_at', 'edited_at', 'reactions']
+        fields = ['id', 'room', 'sender', 'parent', 'content', 'created_at', 'edited_at', 'reactions', 'read_by']
+
+    def get_read_by(self, obj):
+        """List of user IDs who have read this message."""
+        return list(obj.reads.values_list('user_id', flat=True))
 
 
 class CallSessionSerializer(serializers.ModelSerializer):

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MessageCircleIcon, UsersIcon, GlobeIcon } from '../components/icons';
+import DecorativeSvg from '../components/DecorativeSvg';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -10,9 +11,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-welcome">
       <div className="dashboard-bg">
-        <div className="dashboard-glow dashboard-glow-1" />
-        <div className="dashboard-glow dashboard-glow-2" />
-        <div className="dashboard-glow dashboard-glow-3" />
+        <DecorativeSvg className="dashboard-decorative-svg" />
       </div>
       <div className="dashboard-hero">
         <div className="logo-3d-container">

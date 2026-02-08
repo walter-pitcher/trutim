@@ -9,7 +9,16 @@ import AIPromptPanel from './AIPromptPanel';
 import Avatar from './Avatar';
 import RightSidebar from './RightSidebar';
 import EmojiPicker from './EmojiPicker';
-import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, ChevronLeftIcon, MenuIcon, XIcon, MessageCircleIcon, getStatusIcon } from './icons';
+import { SearchIcon, PlusIcon, SparklesIcon, SunIcon, MoonIcon, SettingsIcon, LogOutIcon, HashIcon, GlobeIcon, ChevronLeftIcon, MenuIcon, XIcon, MessageCircleIcon, getStatusIcon, BanIcon, ArchiveIcon, BellOffIcon } from './icons';
+
+const SIDEBAR_WIDTH_KEY = 'trutim-sidebar-width';
+const SIDEBAR_MIN = 200;
+const SIDEBAR_MAX = 480;
+const SIDEBAR_DEFAULT = 300;
+const RIGHT_SIDEBAR_WIDTH_KEY = 'trutim-right-sidebar-width';
+const RIGHT_SIDEBAR_MIN = 240;
+const RIGHT_SIDEBAR_MAX = 500;
+const RIGHT_SIDEBAR_DEFAULT = 320;
 import './Avatar.css';
 import './MainLayout.css';
 
@@ -32,7 +41,70 @@ export default function MainLayout() {
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [rightSidebarVisible, setRightSidebarVisible] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    const n = saved ? parseInt(saved, 10) : SIDEBAR_DEFAULT;
+    return Number.isFinite(n) ? Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, n)) : SIDEBAR_DEFAULT;
+  });
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem(RIGHT_SIDEBAR_WIDTH_KEY);
+    const n = saved ? parseInt(saved, 10) : RIGHT_SIDEBAR_DEFAULT;
+    return Number.isFinite(n) ? Math.max(RIGHT_SIDEBAR_MIN, Math.min(RIGHT_SIDEBAR_MAX, n)) : RIGHT_SIDEBAR_DEFAULT;
+  });
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(0);
+  const rightResizeStartX = useRef(0);
+  const rightResizeStartWidth = useRef(0);
   const statusEmojiAnchorRef = useRef(null);
+
+  const handleResizeStart = (e) => {
+    e.preventDefault();
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = sidebarWidth;
+    const onMove = (ev) => {
+      const dx = ev.clientX - resizeStartX.current;
+      const next = Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, resizeStartWidth.current + dx));
+      setSidebarWidth(next);
+      resizeStartX.current = ev.clientX;
+      resizeStartWidth.current = next;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(resizeStartWidth.current));
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleRightResizeStart = (e) => {
+    e.preventDefault();
+    rightResizeStartX.current = e.clientX;
+    rightResizeStartWidth.current = rightSidebarWidth;
+    const onMove = (ev) => {
+      const dx = ev.clientX - rightResizeStartX.current;
+      const next = Math.max(RIGHT_SIDEBAR_MIN, Math.min(RIGHT_SIDEBAR_MAX, rightResizeStartWidth.current - dx));
+      setRightSidebarWidth(next);
+      rightResizeStartX.current = ev.clientX;
+      rightResizeStartWidth.current = next;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      localStorage.setItem(RIGHT_SIDEBAR_WIDTH_KEY, String(rightResizeStartWidth.current));
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
 
   useEffect(() => {
     Promise.all([rooms.list(), usersApi.list()])
@@ -146,28 +218,71 @@ export default function MainLayout() {
   }, [rightSidebarType, rightSidebarId]);
 
   return (
-    <div className="main-layout">
+    <div className="main-layout" style={{ '--sidebar-width': `${sidebarWidth}px`, '--right-sidebar-width': `${rightSidebarWidth}px` }}>
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <div className="sidebar-header">
+        <div className="sidebar-actions">
           <button className="sidebar-close-mobile" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
             <XIcon size={20} />
           </button>
-          <h1 className="logo-text">
-            <img src="/trutim.png" alt="Trutim" className="logo-icon" />
-            Trutim
-          </h1>
-        </div>
-
-        <button
-          className="sidebar-create-btn"
-          onClick={() => { setShowCreateModal(true); setCreateError(null); setNewRoom({ name: '', description: '', avatar: null }); }}
-          title="Create new company"
-        >
-          <PlusIcon size={18} />
-          New Company
-        </button>
-
-        <div className="sidebar-search">
+          <div className="sidebar-brand-row">
+            <div className="sidebar-actions-brand">
+              <button
+                className="sidebar-brand-btn"
+                onClick={() => setShowActionMenu(!showActionMenu)}
+                aria-label="Open menu"
+                aria-expanded={showActionMenu}
+              >
+                <img src="/trutim.png" alt="Trutim" className="sidebar-brand-icon" />
+              </button>
+              {showActionMenu && (
+              <>
+                <div className="sidebar-action-menu-backdrop" onClick={() => setShowActionMenu(false)} aria-hidden />
+                <div className="sidebar-action-menu">
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { setShowCreateModal(true); setCreateError(null); setNewRoom({ name: '', description: '', avatar: null }); setShowActionMenu(false); }}
+                    title="Create company"
+                  >
+                    <PlusIcon size={20} />
+                    <span>Create company</span>
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { setShowActionMenu(false); }}
+                    title="Blocked list"
+                  >
+                    <BanIcon size={20} />
+                    <span>Blocked list</span>
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { setShowActionMenu(false); }}
+                    title="Archived"
+                  >
+                    <ArchiveIcon size={20} />
+                    <span>Archived</span>
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { setShowActionMenu(false); }}
+                    title="Muted"
+                  >
+                    <BellOffIcon size={20} />
+                    <span>Muted</span>
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { navigate('/profile'); setShowActionMenu(false); }}
+                    title="Settings"
+                  >
+                    <SettingsIcon size={20} />
+                    <span>Settings</span>
+                  </button>
+                </div>
+              </>
+            )}
+            </div>
+            <div className="sidebar-search">
           <SearchIcon size={18} className="search-icon-svg" />
           <input
             type="text"
@@ -176,6 +291,8 @@ export default function MainLayout() {
             onChange={(e) => setSearch(e.target.value)}
             className="search-input"
           />
+            </div>
+          </div>
         </div>
 
         <div className="sidebar-list">
@@ -226,7 +343,7 @@ export default function MainLayout() {
                             className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
                             onClick={() => setSidebarOpen(false)}
                           >
-                            <Avatar user={{ ...u, status: liveStatus }} size={28} />
+                            <Avatar user={{ ...u, status: liveStatus }} size={36} />
                             <span className="item-name">{u.username}</span>
                           </NavLink>
                         </li>
@@ -244,6 +361,12 @@ export default function MainLayout() {
           )}
         </div>
       </aside>
+      <div
+        className="sidebar-resize-handle"
+        onMouseDown={handleResizeStart}
+        title="Drag to resize sidebar"
+        aria-label="Resize sidebar"
+      />
       <div className="sidebar-backdrop" aria-hidden={!sidebarOpen} onClick={() => setSidebarOpen(false)} />
 
       <div className="main-content">
@@ -366,8 +489,15 @@ export default function MainLayout() {
           {rightSidebarType && rightSidebarId && (
             <>
               {rightSidebarVisible ? (
-                <aside className="right-sidebar">
-                  <RightSidebar
+                <>
+                  <div
+                    className="right-sidebar-resize-handle"
+                    onMouseDown={handleRightResizeStart}
+                    title="Drag to resize sidebar"
+                    aria-label="Resize sidebar"
+                  />
+                  <aside className="right-sidebar">
+                    <RightSidebar
                     type={rightSidebarType}
                     id={rightSidebarId}
                     onClose={() => setRightSidebarVisible(false)}
@@ -377,7 +507,8 @@ export default function MainLayout() {
                       window.dispatchEvent(new CustomEvent('company-updated', { detail: updated }));
                     }}
                   />
-                </aside>
+                  </aside>
+                </>
               ) : (
                 <button
                   className="right-sidebar-toggle"

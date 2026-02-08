@@ -310,6 +310,37 @@ export function TrashIcon({ className = '', size = 18 }) {
   );
 }
 
+export function BanIcon({ className = '', size = 20 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="m4.9 4.9 14.2 14.2" />
+    </svg>
+  );
+}
+
+export function ArchiveIcon({ className = '', size = 20 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="5" x="2" y="3" rx="1" />
+      <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+      <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+export function BellOffIcon({ className = '', size = 20 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      <path d="M18.63 13A17.89 17.89 0 0 1 18 8" />
+      <path d="M6.26 6.26A6 6 0 0 1 8 3c2.12 0 4 1.33 4 4v1" />
+      <path d="M6.26 6.26a6 6 0 0 0 4.74 4.74" />
+      <path d="m2 2 20 20" />
+    </svg>
+  );
+}
+
 /** Message read status: single = sent, double = seen */
 export function CheckIcon({ className = '', size = 14 }) {
   return (

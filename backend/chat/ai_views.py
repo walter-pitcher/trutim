@@ -7,6 +7,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
+from rest_framework.response import Response
 
 
 def extract_text_from_parts(parts):
@@ -119,3 +120,51 @@ class AIChatView(APIView):
             yield msg
 
         return gen()
+
+
+class AIImageView(APIView):
+    """Generate an image using OpenAI DALL-E and return a permanent URL."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request):
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return Response({"error": "OPENAI_API_KEY is not configured"}, status=500)
+
+        prompt = request.data.get("prompt") or (request.data.get("text") if isinstance(request.data.get("text"), str) else None)
+        if not prompt or not str(prompt).strip():
+            return Response({"error": "Prompt is required"}, status=400)
+
+        try:
+            from openai import OpenAI
+            from django.core.files.base import ContentFile
+            from django.core.files.storage import default_storage
+            import requests
+            import uuid
+
+            client = OpenAI(api_key=api_key)
+            response = client.images.generate(
+                model=os.environ.get("OPENAI_IMAGE_MODEL", "dall-e-3"),
+                prompt=str(prompt).strip()[:4000],
+                size="1024x1024",
+                quality="standard",
+                n=1,
+            )
+            image_url = response.data[0].url
+            if not image_url:
+                return Response({"error": "No image URL returned"}, status=500)
+
+            # Download and save to our storage for permanence
+            r = requests.get(image_url, timeout=30)
+            r.raise_for_status()
+            ext = ".png"
+            path = default_storage.save(f"ai_images/{uuid.uuid4().hex}{ext}", ContentFile(r.content))
+            url = default_storage.url(path)
+            if url.startswith("/"):
+                url = request.build_absolute_uri(url)
+
+            return Response({"url": url, "prompt": str(prompt).strip()})
+        except ImportError:
+            return Response({"error": "OpenAI package not installed"}, status=500)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

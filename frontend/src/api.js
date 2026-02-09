@@ -81,4 +81,8 @@ export const messages = {
   },
 };
 
+export const ai = {
+  generateImage: (prompt) => API.post('/ai/image/', { prompt }),
+};
+
 export default API;

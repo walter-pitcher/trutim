@@ -1,6 +1,6 @@
 .right-sidebar {
-  width: var(--right-sidebar-width, 320px);
-  min-width: var(--right-sidebar-width, 320px);
+  width: 100%;
+  min-width: 0;
   height: 100%;
   background: var(--bg-secondary);
   border-left: 1px solid var(--border);

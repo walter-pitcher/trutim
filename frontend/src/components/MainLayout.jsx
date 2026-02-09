@@ -219,6 +219,7 @@ export default function MainLayout() {
 
   return (
     <div className="main-layout" style={{ '--sidebar-width': `${sidebarWidth}px`, '--right-sidebar-width': `${rightSidebarWidth}px` }}>
+      <div className="sidebar-wrapper">
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-actions">
           <button className="sidebar-close-mobile" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
@@ -367,6 +368,7 @@ export default function MainLayout() {
         title="Drag to resize sidebar"
         aria-label="Resize sidebar"
       />
+      </div>
       <div className="sidebar-backdrop" aria-hidden={!sidebarOpen} onClick={() => setSidebarOpen(false)} />
 
       <div className="main-content">
@@ -489,7 +491,7 @@ export default function MainLayout() {
           {rightSidebarType && rightSidebarId && (
             <>
               {rightSidebarVisible ? (
-                <>
+                <div className="right-sidebar-wrapper">
                   <div
                     className="right-sidebar-resize-handle"
                     onMouseDown={handleRightResizeStart}
@@ -508,7 +510,7 @@ export default function MainLayout() {
                     }}
                   />
                   </aside>
-                </>
+                </div>
               ) : (
                 <button
                   className="right-sidebar-toggle"

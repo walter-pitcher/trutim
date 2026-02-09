@@ -8,3 +8,4 @@ daphne>=4.0
 djangorestframework-simplejwt>=5.3
 Pillow>=10.0
 openai>=1.0
+requests>=2.28

@@ -6,10 +6,12 @@ import { rooms, messages } from '../api';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { notifyNewMessage, requestPermission } from '../utils/notify';
 import MessageInput from '../components/MessageInput';
+import MessageContent from '../components/MessageContent';
+import ShareCodePanel from '../components/ShareCodePanel';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
 import DecorativeSvg from '../components/DecorativeSvg';
-import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CheckIcon, CheckDoubleIcon } from '../components/icons';
+import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CheckIcon, CheckDoubleIcon, CodeIcon } from '../components/icons';
 
 function formatDateLabel(date) {
   const d = new Date(date);
@@ -37,6 +39,7 @@ export default function Room({ type = 'company' }) {
   const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showShareCodePanel, setShowShareCodePanel] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const messagesEndRef = useRef(null);
@@ -275,6 +278,17 @@ export default function Room({ type = 'company' }) {
 
   return (
     <div className="room-page" key={effectiveRoomId}>
+      {showShareCodePanel && (
+        <ShareCodePanel
+          isOpen={showShareCodePanel}
+          onClose={() => setShowShareCodePanel(false)}
+          onShare={(text) => {
+            sendMessage(text);
+            setShowShareCodePanel(false);
+          }}
+        />
+      )}
+
       {showVideoCall && (
         <VideoCall
           roomId={effectiveRoomId}
@@ -300,6 +314,9 @@ export default function Room({ type = 'company' }) {
           )}
         </div>
         <div className="room-actions">
+          <button onClick={() => setShowShareCodePanel(true)} className="btn-icon" title="Share code">
+            <CodeIcon size={20} />
+          </button>
           <button onClick={() => setShowVideoCall(true)} className="btn-icon" title="Video call">
             <VideoIcon size={20} />
           </button>
@@ -348,91 +365,89 @@ export default function Room({ type = 'company' }) {
               ) : (
                 <div
                   key={item.message.id}
-                  className={`message ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''} ${item.message.isNew ? 'message-new' : ''}`}
+                  className={`message-row ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
                 >
                   {!item.isGrouped && (
-                    <div className="message-header">
-                      <Avatar user={item.message.sender} size={28} showStatus={false} />
-                      <strong>{item.message.sender?.username}</strong>
-                      {item.message.isNew && <span className="message-badge-new">New</span>}
-                      {item.message.sender?.title && <span className="msg-title">{item.message.sender.title}</span>}
-                      <span className="msg-time" title={new Date(item.message.created_at).toLocaleString()}>
-                        {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                    <div className="message-avatar">
+                      <Avatar user={item.message.sender} size={36} showStatus={false} />
                     </div>
                   )}
-                  {item.isGrouped && (
-                    <span className="msg-time-grouped" title={new Date(item.message.created_at).toLocaleString()}>
+                  <div
+                    className={`message ${item.message.isNew ? 'message-new' : ''}`}
+                  >
+                    {type === 'company' && !item.isGrouped && item.message.sender?.id !== user?.id && (
+                      <span className="msg-sender">{item.message.sender?.username || 'Unknown'}</span>
+                    )}
+                    <span className="msg-time-top" title={new Date(item.message.created_at).toLocaleString()}>
                       {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       {item.message.isNew && <span className="message-badge-new">New</span>}
                     </span>
-                  )}
-                  <div className="message-body">{item.message.content}</div>
-                  <div className="message-footer">
-                    <div className="message-reactions">
-                      {item.message.reactions && Object.entries(item.message.reactions).map(([emoji, ids]) => (
-                        <button
-                          key={emoji}
-                          className="reaction"
-                          onClick={() => addReaction(item.message.id, emoji)}
-                          title="Toggle reaction"
-                        >
-                          {emoji} {ids.length}
-                        </button>
-                      ))}
-                      <span className="reaction-add" title="Add reaction">
-                        {quickEmojis.slice(0, 5).map((e) => (
+                    <div className="message-body">
+                      <MessageContent content={item.message.content} theme={theme} />
+                    </div>
+                    <div className="message-footer">
+                      <div className="message-reactions">
+                        {item.message.reactions && Object.entries(item.message.reactions).map(([emoji, ids]) => (
                           <button
-                            key={e}
-                            onClick={() => addReaction(item.message.id, e)}
-                            className="reaction-btn"
+                            key={emoji}
+                            className="reaction"
+                            onClick={() => addReaction(item.message.id, emoji)}
+                            title="Toggle reaction"
                           >
-                            {e}
+                            {emoji} {ids.length}
                           </button>
                         ))}
-                      </span>
-                    </div>
-                    <div className="message-actions">
-                      {item.message.sender?.id === user?.id && (
-                        <span className="msg-read-status" title={(item.message.read_by || []).length > 0 ? 'Seen by receiver' : 'Sent'}>
-                          {(item.message.read_by || []).length > 0 ? (
-                            <CheckDoubleIcon size={14} className="msg-read-seen" />
-                          ) : (
-                            <CheckIcon size={14} className="msg-read-sent" />
-                          )}
+                        <span className="reaction-add" title="Add reaction">
+                          {quickEmojis.slice(0, 5).map((e) => (
+                            <button
+                              key={e}
+                              onClick={() => addReaction(item.message.id, e)}
+                              className="reaction-btn"
+                            >
+                              {e}
+                            </button>
+                          ))}
                         </span>
-                      )}
-                      <button
-                        type="button"
-                        className="message-action-btn"
-                        onClick={() => handleReply(item.message)}
-                        title="Reply"
-                      >
-                        <ReplyIcon size={14} />
-                        <span>Reply</span>
-                      </button>
-                      {item.message.sender?.id === user?.id && (
-                        <>
-                          <button
-                            type="button"
-                            className="message-action-btn"
-                            onClick={() => handleEdit(item.message)}
-                            title="Edit message"
-                          >
-                            <EditIcon size={14} />
-                            <span>Edit</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="message-action-btn message-action-danger"
-                            onClick={() => handleDelete(item.message)}
-                            title="Delete message"
-                          >
-                            <TrashIcon size={14} />
-                            <span>Delete</span>
-                          </button>
-                        </>
-                      )}
+                      </div>
+                      <div className="message-actions">
+                        {item.message.sender?.id === user?.id && (
+                          <span className="msg-read-status" title={(item.message.read_by || []).length > 0 ? 'Seen by receiver' : 'Sent'}>
+                            {(item.message.read_by || []).length > 0 ? (
+                              <CheckDoubleIcon size={14} className="msg-read-seen" />
+                            ) : (
+                              <CheckIcon size={14} className="msg-read-sent" />
+                            )}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className="message-action-btn"
+                          onClick={() => handleReply(item.message)}
+                          title="Reply"
+                        >
+                          <ReplyIcon size={16} />
+                        </button>
+                        {item.message.sender?.id === user?.id && (
+                          <>
+                            <button
+                              type="button"
+                              className="message-action-btn"
+                              onClick={() => handleEdit(item.message)}
+                              title="Edit message"
+                            >
+                              <EditIcon size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="message-action-btn message-action-danger"
+                              onClick={() => handleDelete(item.message)}
+                              title="Delete message"
+                            >
+                              <TrashIcon size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

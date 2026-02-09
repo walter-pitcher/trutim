@@ -279,6 +279,29 @@ export function CalendarIcon({ className = '', size = 20 }) {
   );
 }
 
+/** Content create - canvas/layout with pen */
+export function ContentCreateIcon({ className = '', size = 20 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <path d="M12 8v8" />
+      <path d="M8 12h8" />
+      <path d="m15 9 3 3" />
+    </svg>
+  );
+}
+
+/** Diagram / drawing tool */
+export function PenToolIcon({ className = '', size = 20 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z" />
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+      <path d="M2 2l7.586 7.586" />
+    </svg>
+  );
+}
+
 /** Message action icons */
 export function ReplyIcon({ className = '', size = 18 }) {
   return (

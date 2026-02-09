@@ -100,32 +100,107 @@
 .message-input-form .input-wrapper {
   flex: 1 1 120px;
   min-width: 120px;
+  max-height: 200px;
+  overflow-y: auto;
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
 }
 
-.message-textarea {
+/* Rich contenteditable input - shows code, links, dates styled inline */
+.message-editor {
   width: 100%;
   min-height: 40px;
-  max-height: 120px;
+  max-height: 200px;
   padding: 0.35rem 0;
   background: transparent;
   border: none;
   color: var(--text);
   font-size: 0.95rem;
   font-family: inherit;
-  resize: none;
   line-height: 1.5;
   overflow-y: auto;
+  outline: none;
+  flex: 1;
 }
 
-.message-textarea::placeholder {
+.message-editor:empty::before {
+  content: attr(data-placeholder);
   color: var(--text-subtle);
 }
 
-.message-textarea:focus {
+.message-editor:focus {
   outline: none;
+}
+
+/* Inline code in input - monospace font only */
+.message-editor code {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg-tertiary);
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+/* Code block in input - no ``` shown */
+.message-editor .msg-input-code {
+  display: block;
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-editor .msg-input-code code {
+  font-family: inherit;
+  background: none;
+  padding: 0;
+}
+
+/* Flow diagram placeholder in input */
+.message-editor .msg-input-flowdiagram {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  background: var(--bg-elevated);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.message-editor .msg-input-flowdiagram:hover {
+  background: var(--bg-hover);
+}
+
+/* Inline images (drawn diagrams) in input */
+.message-editor .msg-input-img {
+  max-width: 200px;
+  max-height: 160px;
+  object-fit: contain;
+  vertical-align: middle;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* Links in input */
+.message-editor a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.message-editor a:hover {
+  text-decoration: underline;
+}
+
+/* Date links in input */
+.message-editor a.msg-input-date {
+  color: var(--accent);
 }
 
 .message-input-actions {
@@ -364,7 +439,7 @@
     min-width: 60px;
   }
 
-  .message-textarea {
+  .message-editor {
     min-height: 36px;
     font-size: 0.9rem;
   }

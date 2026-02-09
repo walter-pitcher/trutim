@@ -14,9 +14,16 @@
 }
 
 /* Left Sidebar - Professional */
-.sidebar {
+.sidebar-wrapper {
+  position: relative;
+  flex-shrink: 0;
   width: var(--sidebar-width, 300px);
   min-width: var(--sidebar-width, 300px);
+}
+
+.sidebar {
+  width: 100%;
+  min-width: 0;
   height: 100vh;
   max-height: 100vh;
   background: var(--bg-secondary);
@@ -29,12 +36,13 @@
 }
 
 .sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: 6px;
-  min-width: 6px;
-  flex-shrink: 0;
   cursor: col-resize;
   background: transparent;
-  position: relative;
   z-index: 10;
 }
 
@@ -700,13 +708,21 @@ a.sidebar-item {
   flex-direction: column;
 }
 
-.right-sidebar-resize-handle {
-  width: 6px;
-  min-width: 6px;
+.right-sidebar-wrapper {
+  position: relative;
   flex-shrink: 0;
+  width: var(--right-sidebar-width, 320px);
+  min-width: var(--right-sidebar-width, 320px);
+}
+
+.right-sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
   cursor: col-resize;
   background: transparent;
-  position: relative;
   z-index: 10;
 }
 
@@ -947,6 +963,12 @@ a.sidebar-item {
 }
 
 @media (max-width: 768px) {
+  .sidebar-wrapper {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+  }
+
   .sidebar {
     position: fixed;
     top: 0;
@@ -972,7 +994,7 @@ a.sidebar-item {
     display: block;
   }
 
-  .sidebar.sidebar-open ~ .sidebar-backdrop {
+  .sidebar-wrapper:has(.sidebar.sidebar-open) + .sidebar-backdrop {
     opacity: 1;
     pointer-events: auto;
   }
@@ -1026,6 +1048,12 @@ a.sidebar-item {
 
   .header-ai-btn .header-ai-label {
     display: none;
+  }
+
+  .right-sidebar-wrapper {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
   }
 
   .right-sidebar {

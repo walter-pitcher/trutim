@@ -68,6 +68,12 @@ Create and join chat rooms with ease. Each room maintains its own message histor
 ### AI Assistant
 An in-app AI chat panel powered by the **Vercel AI SDK** and **OpenAI** (streaming). Ask questions, get code suggestions, or brainstorm—without leaving the app. Optional; enable with your OpenAI API key.
 
+### AI Image Generate
+Generate images from text prompts directly in chat using **OpenAI DALL-E**. Click the image icon in the message toolbar, describe the image you want, and send it to the conversation.
+
+### Share Code Panel
+A dedicated panel for sharing code snippets. Click the code icon in the room header to open it. Paste code, optionally select a language, preview it, and share to chat with proper formatting.
+
 ---
 
 ## Tech Stack
@@ -198,8 +204,9 @@ Then click the **AI** button in the header to open the assistant.
 | `DB_PASSWORD` | `postgres` | PostgreSQL password |
 | `DB_HOST` | `localhost` | Database host |
 | `DB_PORT` | `5432` | Database port |
-| `OPENAI_API_KEY` | — | OpenAI API key for the AI Assistant panel (optional) |
-| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model to use (e.g. `gpt-4o`, `gpt-4o-mini`) |
+| `OPENAI_API_KEY` | — | OpenAI API key for the AI Assistant and AI Image Generate (optional) |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for chat (e.g. `gpt-4o`, `gpt-4o-mini`) |
+| `OPENAI_IMAGE_MODEL` | `dall-e-3` | OpenAI model for image generation |
 
 ### Example: PostgreSQL Configuration
 
@@ -283,6 +290,7 @@ Base URL: `http://localhost:8001/api` (or your backend host)
 | `GET` | `/api/messages/?room=<id>` | List messages for a room |
 | `GET` | `/api/users/` | List users (ViewSet) |
 | `POST` | `/api/ai/chat/` | AI chat (streaming; requires `OPENAI_API_KEY`) |
+| `POST` | `/api/ai/image/` | AI image generation (DALL-E; requires `OPENAI_API_KEY`) |
 
 ---
 

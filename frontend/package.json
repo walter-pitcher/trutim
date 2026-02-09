@@ -14,10 +14,12 @@
     "axios": "^1.13.4",
     "emoji-picker-element": "^1.28.1",
     "leaflet": "^1.9.4",
+    "mermaid": "^11.12.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.13.0",
+    "reactflow": "^11.11.4",
     "twemoji": "^14.0.2"
   },
   "devDependencies": {

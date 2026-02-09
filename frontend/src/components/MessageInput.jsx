@@ -1,6 +1,9 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import EmojiPicker from './EmojiPicker';
-import { CodeIcon, FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon } from './icons';
+import { FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon, ImageIcon, ContentCreateIcon } from './icons';
+import AIImageModal from './AIImageModal';
+import DiagramModal from './DiagramModal';
+import { markdownToHtml, htmlToMarkdown } from '../utils/richInput';
 import './MessageInput.css';
 
 const FONT_SIZES = [
@@ -8,6 +11,19 @@ const FONT_SIZES = [
   { label: 'M', value: 'normal', wrap: '', wrapEnd: '' },
   { label: 'L', value: 'large', wrap: '<big>', wrapEnd: '</big>' },
 ];
+
+function saveSelection() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  return sel.getRangeAt(0).cloneRange();
+}
+
+function restoreSelection(savedRange) {
+  if (!savedRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(savedRange);
+}
 
 export default function MessageInput({
   value,
@@ -29,18 +45,48 @@ export default function MessageInput({
   const [showFontSize, setShowFontSize] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showAIImageModal, setShowAIImageModal] = useState(false);
+  const [showDiagramModal, setShowDiagramModal] = useState(false);
+  const [diagramEditData, setDiagramEditData] = useState(null);
+  const diagramEditSpanRef = useRef(null);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [calendarTitle, setCalendarTitle] = useState('');
   const [calendarDate, setCalendarDate] = useState('');
   const [calendarTime, setCalendarTime] = useState('');
   const [calendarLocation, setCalendarLocation] = useState('');
-  const textareaRef = useRef(null);
+  const editorRef = useRef(null);
   const emojiAnchorRef = useRef(null);
   const fileInputRef = useRef(null);
   const typingDebounceRef = useRef(null);
+  const savedRangeRef = useRef(null);
+  const isInternalUpdateRef = useRef(false);
 
   const keepFocus = (e) => e.preventDefault();
+
+  const syncToMarkdown = useCallback(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const html = el.innerHTML;
+    const md = htmlToMarkdown(html);
+    if (!isInternalUpdateRef.current && md !== (value || '')) {
+      onChange(md);
+    }
+  }, [onChange, value]);
+
+  useEffect(() => {
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
+      return;
+    }
+    const el = editorRef.current;
+    if (!el) return;
+    const md = value || '';
+    const currentMd = htmlToMarkdown(el.innerHTML);
+    if (currentMd !== md) {
+      el.innerHTML = markdownToHtml(md) || '';
+    }
+  }, [value]);
 
   const notifyTyping = useCallback(() => {
     if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
@@ -50,100 +96,97 @@ export default function MessageInput({
     }, 2000);
   }, [onTyping]);
 
-  const insertAtCursor = (before, after = '', textOverride) => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = textOverride ?? value ?? '';
-    const selected = text.slice(start, end);
-    const newText = text.slice(0, start) + before + selected + after + text.slice(end);
-    onChange(newText);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    }, 0);
-  };
-
-  const insertCode = () => {
-    insertAtCursor('```\n', '\n```');
-    setShowFontSize(false);
+  const wrapSelection = (before, after) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    if (sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const selected = range.toString();
+    const wrapper = document.createElement('span');
+    wrapper.innerHTML = before + selected + after;
+    range.extractContents();
+    range.insertNode(wrapper);
+    range.setStartAfter(wrapper);
+    range.setEndAfter(wrapper);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    syncToMarkdown();
   };
 
   const insertGitBlock = () => {
-    insertAtCursor('```git\n', '\n```');
+    savedRangeRef.current = saveSelection();
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    if (sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const selected = range.toString() || ' ';
+    const pre = document.createElement('pre');
+    pre.className = 'msg-input-code';
+    pre.setAttribute('data-lang', 'git');
+    const code = document.createElement('code');
+    code.textContent = selected.trim();
+    pre.appendChild(code);
+    range.deleteContents();
+    range.insertNode(pre);
+    range.setStartAfter(pre);
+    range.setEndAfter(pre);
+    sel.removeAllRanges();
+    sel.addRange(range);
     setShowFontSize(false);
+    syncToMarkdown();
+  };
+
+  const openLinkModal = () => {
+    savedRangeRef.current = saveSelection();
+    const sel = window.getSelection();
+    const selectedText = sel?.rangeCount > 0 ? sel.toString() : '';
+    setLinkText(selectedText);
+    setLinkUrl('');
+    setShowLinkModal(true);
   };
 
   const insertLink = () => {
-    if (linkUrl.trim()) {
-      const text = linkText.trim() || linkUrl;
-      insertAtCursor(`[${text}](${linkUrl.trim()})`, '');
-      setLinkUrl('');
-      setLinkText('');
-      setShowLinkModal(false);
+    if (!linkUrl.trim()) return;
+    const text = linkText.trim() || linkUrl.trim();
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    restoreSelection(savedRangeRef.current);
+    const sel = window.getSelection();
+    const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    const a = document.createElement('a');
+    a.href = linkUrl.trim();
+    a.textContent = text;
+    if (range) {
+      range.deleteContents();
+      range.insertNode(a);
+      range.setStartAfter(a);
+      range.setEndAfter(a);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      el.appendChild(a);
     }
+    setLinkUrl('');
+    setLinkText('');
+    setShowLinkModal(false);
+    savedRangeRef.current = null;
+    syncToMarkdown();
   };
 
-  const handleFileSelect = async (e) => {
-    const files = e.target.files;
-    if (!files?.length) return;
-    const ta = textareaRef.current;
-    let currentText = ta?.value ?? value ?? '';
-    let insertPos = ta?.selectionStart ?? currentText.length;
-    for (const file of files) {
-      let toInsert;
-      if (onFileUpload) {
-        try {
-          const { data } = await onFileUpload(file);
-          const url = data.url || data;
-          const name = data.filename || file.name;
-          toInsert = `[📎 ${name}](${url})`;
-        } catch (err) {
-          const name = file.name;
-          const size = (file.size / 1024).toFixed(1);
-          toInsert = `[📎 ${name} (${size} KB)]`;
-        }
-      } else {
-        const name = file.name;
-        const size = (file.size / 1024).toFixed(1);
-        toInsert = `[📎 ${name} (${size} KB)]`;
-      }
-      currentText = currentText.slice(0, insertPos) + toInsert + currentText.slice(insertPos);
-      insertPos += toInsert.length;
-    }
-    onChange(currentText);
-    setTimeout(() => {
-      ta?.focus();
-      ta?.setSelectionRange(insertPos, insertPos);
-    }, 0);
-    e.target.value = '';
-  };
-
-  const addEmoji = (emoji) => {
-    const ta = textareaRef.current;
-    if (ta) {
-      const start = ta.selectionStart;
-      const text = value || '';
-      const newText = text.slice(0, start) + emoji + text.slice(start);
-      onChange(newText);
-      setTimeout(() => ta.setSelectionRange(start + emoji.length, start + emoji.length), 0);
-    }
-    setShowEmoji(false);
-  };
-
-  const handleFontSize = (fs) => {
-    if (fs.wrap) insertAtCursor(fs.wrap, fs.wrapEnd);
-    setShowFontSize(false);
-  };
-
-  const handleSubmit = (e) => {
-    e?.preventDefault();
-    const text = (value || '').trim();
-    if (!text) return;
-    onSend?.(text);
-    onChange('');
-    onTyping?.({ typing: false });
+  const openCalendarModal = () => {
+    savedRangeRef.current = saveSelection();
+    const sel = window.getSelection();
+    const selectedText = sel?.rangeCount > 0 ? sel.toString() : '';
+    setCalendarTitle(selectedText);
+    setCalendarDate(new Date().toISOString().slice(0, 10));
+    setCalendarTime('09:00');
+    setCalendarLocation('');
+    setShowCalendarModal(true);
   };
 
   const buildGoogleCalendarUrl = (title, dateStr, timeStr, location) => {
@@ -161,21 +204,131 @@ export default function MessageInput({
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
-  const handleCreateCalendarLink = () => {
+  const insertCalendarLink = () => {
     const title = calendarTitle.trim() || 'Event';
     const dateStr = calendarDate || new Date().toISOString().slice(0, 10);
     const timeStr = calendarTime || '09:00';
     const location = calendarLocation.trim();
     const url = buildGoogleCalendarUrl(title, dateStr, timeStr, location);
     const linkText = `${title} - ${dateStr} ${timeStr}`;
-    const toSend = `[📅 ${linkText}](${url})`;
-    onSend?.(toSend);
+    const el = editorRef.current;
+    if (el) {
+      el.focus();
+      restoreSelection(savedRangeRef.current);
+      const sel = window.getSelection();
+      const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
+      const a = document.createElement('a');
+      a.href = url;
+      a.className = 'msg-input-date';
+      a.textContent = `📅 ${linkText}`;
+      if (range) {
+        range.deleteContents();
+        range.insertNode(a);
+        range.setStartAfter(a);
+        range.setEndAfter(a);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        el.appendChild(a);
+      }
+    }
     setCalendarTitle('');
     setCalendarDate('');
     setCalendarTime('');
     setCalendarLocation('');
     setShowCalendarModal(false);
+    savedRangeRef.current = null;
+    syncToMarkdown();
   };
+
+  const handleFileSelect = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    for (const file of files) {
+      let url = '#';
+      let text = file.name;
+      if (onFileUpload) {
+        try {
+          const { data } = await onFileUpload(file);
+          url = data.url || data;
+          text = `📎 ${data.filename || file.name}`;
+        } catch (err) {
+          text = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        }
+      } else {
+        text = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      }
+      const a = document.createElement('a');
+      a.href = url;
+      a.textContent = text;
+      if (range) {
+        range.insertNode(a);
+        range.setStartAfter(a);
+        range.setEndAfter(a);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        el.appendChild(a);
+      }
+    }
+    syncToMarkdown();
+    e.target.value = '';
+  };
+
+  const addEmoji = (emoji) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    const sel = window.getSelection();
+    const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    const text = document.createTextNode(emoji);
+    if (range) {
+      range.insertNode(text);
+      range.setStartAfter(text);
+      range.setEndAfter(text);
+    } else {
+      el.appendChild(text);
+    }
+    syncToMarkdown();
+    setShowEmoji(false);
+  };
+
+  const handleFontSize = (fs) => {
+    if (fs.wrap) wrapSelection(fs.wrap, fs.wrapEnd);
+    setShowFontSize(false);
+  };
+
+  const handleSubmit = (e) => {
+    e?.preventDefault();
+    const el = editorRef.current;
+    if (!el) return;
+    const md = htmlToMarkdown(el.innerHTML);
+    const text = md.trim();
+    if (!text) return;
+    onSend?.(text);
+    isInternalUpdateRef.current = true;
+    onChange('');
+    el.innerHTML = '';
+    onTyping?.({ typing: false });
+  };
+
+  const handleInput = () => {
+    notifyTyping();
+    syncToMarkdown();
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
+  };
+
+  const hasContent = ((value || '').trim().length > 0);
 
   return (
     <div className="message-input-container">
@@ -214,13 +367,16 @@ export default function MessageInput({
               <FileIcon size={18} />
             </button>
             <input ref={fileInputRef} type="file" multiple className="file-input-hidden" onChange={handleFileSelect} />
-            <button type="button" onMouseDown={keepFocus} onClick={insertCode} className="toolbar-btn" title="Code block">
-              <CodeIcon size={18} />
+            <button type="button" onMouseDown={keepFocus} onClick={() => setShowAIImageModal(true)} className="toolbar-btn" title="AI Generate Image">
+              <ImageIcon size={18} />
             </button>
-            <button type="button" onMouseDown={keepFocus} onClick={() => setShowLinkModal(true)} className="toolbar-btn" title="Insert link">
+            <button type="button" onMouseDown={keepFocus} onClick={() => { diagramEditSpanRef.current = null; setDiagramEditData(null); setShowDiagramModal(true); }} className="toolbar-btn" title="Create diagram">
+              <ContentCreateIcon size={18} />
+            </button>
+            <button type="button" onMouseDown={keepFocus} onClick={openLinkModal} className="toolbar-btn" title="Insert link">
               <LinkIcon size={18} />
             </button>
-            <button type="button" onMouseDown={keepFocus} onClick={() => setShowCalendarModal(true)} className="toolbar-btn" title="Create calendar link">
+            <button type="button" onMouseDown={keepFocus} onClick={openCalendarModal} className="toolbar-btn" title="Create calendar link">
               <CalendarIcon size={18} />
             </button>
             <div className="toolbar-dropdown">
@@ -250,20 +406,32 @@ export default function MessageInput({
           </div>
         )}
         <div className="input-wrapper">
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => { onChange(e.target.value); notifyTyping(); }}
+          <div
+            ref={editorRef}
+            contentEditable={!disabled}
+            suppressContentEditableWarning
+            onInput={handleInput}
+            onPaste={handlePaste}
+            onDoubleClick={(e) => {
+              const span = e.target.closest?.('.msg-input-flowdiagram');
+              if (span) {
+                const data = span.getAttribute('data-flowdiagram');
+                if (data) {
+                  e.preventDefault();
+                  diagramEditSpanRef.current = span;
+                  setDiagramEditData(data);
+                  setShowDiagramModal(true);
+                }
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit();
               }
             }}
-            placeholder={placeholder}
-            disabled={disabled}
-            rows={1}
-            className="message-textarea"
+            className="message-editor"
+            data-placeholder={placeholder}
           />
         </div>
         <div className="message-input-actions">
@@ -274,7 +442,7 @@ export default function MessageInput({
               ))}
             </div>
           )}
-          <button type="submit" disabled={disabled || !(value || '').trim()} className="btn-send" title="Send (Enter)">
+          <button type="submit" disabled={disabled || !hasContent} className="btn-send" title="Send (Enter)">
             <SendArrowIcon size={20} />
           </button>
         </div>
@@ -334,11 +502,64 @@ export default function MessageInput({
             />
             <div className="link-modal-actions">
               <button type="button" onClick={() => setShowCalendarModal(false)}>Cancel</button>
-              <button type="button" onClick={handleCreateCalendarLink}>Create & Send</button>
+              <button type="button" onClick={insertCalendarLink}>Insert</button>
             </div>
           </div>
         </div>
       )}
+
+      {showAIImageModal && (
+        <AIImageModal
+          onClose={() => setShowAIImageModal(false)}
+          onSend={(text) => {
+            onSend?.(text);
+            setShowAIImageModal(false);
+          }}
+          theme={theme}
+        />
+      )}
+
+      {showDiagramModal && (
+        <DiagramModal
+          onClose={() => setShowDiagramModal(false)}
+          initialData={diagramEditData}
+          onInsert={(flowData) => {
+            const el = editorRef.current;
+            if (el && flowData) {
+              el.focus();
+              const spanToReplace = diagramEditSpanRef.current;
+              const newSpan = document.createElement('span');
+              newSpan.className = 'msg-input-flowdiagram';
+              newSpan.setAttribute('contenteditable', 'false');
+              newSpan.setAttribute('data-flowdiagram', flowData.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+              newSpan.setAttribute('title', 'Double-click to edit diagram');
+              newSpan.textContent = '📊 Diagram';
+              if (spanToReplace?.parentNode) {
+                spanToReplace.parentNode.replaceChild(newSpan, spanToReplace);
+              } else {
+                const sel = window.getSelection();
+                const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
+                if (range) {
+                  range.deleteContents();
+                  range.insertNode(newSpan);
+                  range.setStartAfter(newSpan);
+                  range.setEndAfter(newSpan);
+                  sel.removeAllRanges();
+                  sel.addRange(range);
+                } else {
+                  el.appendChild(newSpan);
+                }
+              }
+              syncToMarkdown();
+            }
+            setShowDiagramModal(false);
+            setDiagramEditData(null);
+            diagramEditSpanRef.current = null;
+          }}
+          theme={theme}
+        />
+      )}
+
     </div>
   );
 }

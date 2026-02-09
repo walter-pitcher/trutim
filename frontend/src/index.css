@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
 
 /* Professional color palette - Corporate blue */
 :root {
@@ -95,7 +95,7 @@ body {
 }
 
 code, .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Fira Code', 'Consolas', monospace;
 }
 
 button {

@@ -42,6 +42,16 @@ export default function MainLayout() {
   const [rightSidebarVisible, setRightSidebarVisible] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
+  const [companyContextMenu, setCompanyContextMenu] = useState(null);
+  const [showChannelModal, setShowChannelModal] = useState(false);
+  const [channelForm, setChannelForm] = useState({ name: '', description: '' });
+  const [channelError, setChannelError] = useState(null);
+  const [pendingChannelRoom, setPendingChannelRoom] = useState(null);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [newGroup, setNewGroup] = useState({ name: '', description: '' });
+  const [groupError, setGroupError] = useState(null);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [selectedGroupUserIds, setSelectedGroupUserIds] = useState(new Set());
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     const n = saved ? parseInt(saved, 10) : SIDEBAR_DEFAULT;
@@ -144,9 +154,19 @@ export default function MainLayout() {
     return () => window.removeEventListener('room-activity', handler);
   }, []);
 
-  const filteredRooms = roomList.filter(
+  const companies = roomList.filter(
     (r) =>
       !r.is_direct &&
+      !r.is_group &&
+      (!search ||
+        r.name.toLowerCase().includes(search.toLowerCase()) ||
+        (r.description || '').toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const groups = roomList.filter(
+    (r) =>
+      !r.is_direct &&
+      r.is_group &&
       (!search ||
         r.name.toLowerCase().includes(search.toLowerCase()) ||
         (r.description || '').toLowerCase().includes(search.toLowerCase()))
@@ -205,6 +225,136 @@ export default function MainLayout() {
     }
   };
 
+  const handleCompanyContextMenu = (e, room) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCompanyContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      room,
+    });
+  };
+
+  useEffect(() => {
+    if (!companyContextMenu) return;
+    const handleClick = () => setCompanyContextMenu(null);
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setCompanyContextMenu(null);
+    };
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [companyContextMenu]);
+
+  const openChannelModalForRoom = (room) => {
+    if (!room) return;
+    setPendingChannelRoom(room);
+    setChannelForm({ name: '', description: '' });
+    setChannelError(null);
+    setShowChannelModal(true);
+    setCompanyContextMenu(null);
+  };
+
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    if (!pendingChannelRoom) return;
+    setChannelError(null);
+    const name = (channelForm.name || '').trim();
+    const description = (channelForm.description || '').trim();
+    if (!name) {
+      setChannelError('Channel name is required');
+      return;
+    }
+    try {
+      const { data } = await rooms.channels.create(pendingChannelRoom.id, { name, description });
+      window.dispatchEvent(
+        new CustomEvent('channel-created', {
+          detail: {
+            roomId: pendingChannelRoom.id,
+            channel: data,
+          },
+        })
+      );
+      setShowChannelModal(false);
+      setPendingChannelRoom(null);
+      setChannelForm({ name: '', description: '' });
+    } catch (err) {
+      const d = err.response?.data;
+      const msg =
+        d?.error ??
+        d?.name?.[0] ??
+        d?.description?.[0] ??
+        d?.detail ??
+        err.message ??
+        'Failed to create channel';
+      setChannelError(typeof msg === 'string' ? msg : String(msg));
+    }
+  };
+
+  const toggleSelectGroupUser = (id) => {
+    setSelectedGroupUserIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const filteredGroupUsers = userList.filter((u) => {
+    if (!groupSearch) return true;
+    const q = groupSearch.toLowerCase();
+    return (
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.first_name || '').toLowerCase().includes(q) ||
+      (u.last_name || '').toLowerCase().includes(q)
+    );
+  });
+
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    setGroupError(null);
+    const name = (newGroup.name || '').trim();
+    const description = (newGroup.description || '').trim();
+    if (!name) {
+      setGroupError('Group name is required');
+      return;
+    }
+    try {
+      const payload = { name, description, is_group: true };
+      const res = await rooms.create(payload);
+      const data = res.data;
+      const invitedIds = Array.from(selectedGroupUserIds);
+      if (invitedIds.length) {
+        try {
+          await rooms.invite(data.id, invitedIds);
+        } catch {
+          // Ignore invite errors; group room still created
+        }
+      }
+      setRoomList((prev) => [data, ...prev]);
+      setNewGroup({ name: '', description: '' });
+      setSelectedGroupUserIds(new Set());
+      setGroupSearch('');
+      setShowCreateGroupModal(false);
+      navigate(`/company/${data.id}`);
+    } catch (err) {
+      const d = err.response?.data;
+      const msg =
+        d?.name?.[0] ??
+        d?.description?.[0] ??
+        d?.detail ??
+        err.message ??
+        'Failed to create group';
+      setGroupError(typeof msg === 'string' ? msg : String(msg));
+    }
+  };
+
   const contactUserIdMatch = location.pathname.match(/^\/contact\/(\d+)$/);
   const companyIdMatch = location.pathname.match(/^\/company\/(\d+)$/);
   const currentContactUserId = contactUserIdMatch ? parseInt(contactUserIdMatch[1], 10) : null;
@@ -246,6 +396,14 @@ export default function MainLayout() {
                   >
                     <PlusIcon size={20} />
                     <span>Create company</span>
+                  </button>
+                  <button
+                    className="sidebar-action-btn"
+                    onClick={() => { setShowCreateGroupModal(true); setGroupError(null); setNewGroup({ name: '', description: '' }); setSelectedGroupUserIds(new Set()); setGroupSearch(''); setShowActionMenu(false); }}
+                    title="Create group"
+                  >
+                    <PlusIcon size={20} />
+                    <span>Create group</span>
                   </button>
                   <button
                     className="sidebar-action-btn"
@@ -301,12 +459,48 @@ export default function MainLayout() {
             <div className="sidebar-loading">Loading...</div>
           ) : (
             <>
-              {filteredRooms.length > 0 && (
+              {companies.length > 0 && (
                 <div className="sidebar-section">
                   <div className="section-label">Companies</div>
                   <ul className="item-list">
-                    {filteredRooms.map((room) => (
-                      <li key={room.id}>
+                    {companies.map((room) => (
+                      <li
+                        key={room.id}
+                        onContextMenu={(e) => handleCompanyContextMenu(e, room)}
+                      >
+                        <NavLink
+                          to={`/company/${room.id}`}
+                          className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                          onClick={() => setSidebarOpen(false)}
+                        >
+                          {room.avatar ? (
+                            <img
+                              src={room.avatar.startsWith('/') ? room.avatar : `/${room.avatar}`}
+                              alt=""
+                              className="item-icon sidebar-room-avatar"
+                            />
+                          ) : (
+                            <HashIcon size={16} className="item-icon" />
+                          )}
+                          <span className="item-name">{room.name}</span>
+                          {room.member_count > 0 && (
+                            <span className="item-meta">{room.member_count}</span>
+                          )}
+                        </NavLink>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {groups.length > 0 && (
+                <div className="sidebar-section">
+                  <div className="section-label">Groups</div>
+                  <ul className="item-list">
+                    {groups.map((room) => (
+                      <li
+                        key={room.id}
+                        onContextMenu={(e) => handleCompanyContextMenu(e, room)}
+                      >
                         <NavLink
                           to={`/company/${room.id}`}
                           className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
@@ -353,7 +547,7 @@ export default function MainLayout() {
                   </ul>
                 </div>
               )}
-              {!loading && filteredRooms.length === 0 && filteredUsers.length === 0 && (
+              {!loading && companies.length === 0 && groups.length === 0 && filteredUsers.length === 0 && (
                 <div className="sidebar-empty">
                   {search ? 'No results found' : 'No companies or contacts yet'}
                 </div>
@@ -527,6 +721,23 @@ export default function MainLayout() {
 
       <AIPromptPanel isOpen={showAIPanel} onClose={() => setShowAIPanel(false)} />
 
+      {companyContextMenu && (
+        <div
+          className="company-context-menu"
+          style={{ left: companyContextMenu.x, top: companyContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="company-context-item"
+            onClick={() => openChannelModalForRoom(companyContextMenu.room)}
+          >
+            <HashIcon size={16} className="company-context-icon" />
+            <span>Create channel</span>
+          </button>
+        </div>
+      )}
+
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -583,6 +794,104 @@ export default function MainLayout() {
               <div className="modal-actions">
                 <button type="submit" className="btn-primary">Create</button>
                 <button type="button" onClick={() => setShowCreateModal(false)} className="btn-outline">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showChannelModal && (
+        <div className="modal-overlay" onClick={() => setShowChannelModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Create Channel</h2>
+            <form onSubmit={handleCreateChannel}>
+              {channelError && <p className="create-error">{channelError}</p>}
+              <input
+                placeholder="Channel name"
+                value={channelForm.name}
+                onChange={(e) => setChannelForm((prev) => ({ ...prev, name: e.target.value }))}
+                required
+                autoFocus
+              />
+              <input
+                placeholder="Description (optional)"
+                value={channelForm.description}
+                onChange={(e) => setChannelForm((prev) => ({ ...prev, description: e.target.value }))}
+              />
+              <div className="modal-actions">
+                <button type="submit" className="btn-primary">Create</button>
+                <button
+                  type="button"
+                  onClick={() => setShowChannelModal(false)}
+                  className="btn-outline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateGroupModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
+          <div className="modal-content modal-content-large" onClick={(e) => e.stopPropagation()}>
+            <h2>Create Group</h2>
+            <form onSubmit={handleCreateGroup} className="create-group-form">
+              {groupError && <p className="create-error">{groupError}</p>}
+              <input
+                placeholder="Group name"
+                value={newGroup.name}
+                onChange={(e) => setNewGroup((prev) => ({ ...prev, name: e.target.value }))}
+                required
+                autoFocus
+              />
+              <input
+                placeholder="Description (optional)"
+                value={newGroup.description}
+                onChange={(e) => setNewGroup((prev) => ({ ...prev, description: e.target.value }))}
+              />
+              <div className="create-group-invite-section">
+                <div className="create-group-invite-header">
+                  <span>Invite people (optional)</span>
+                  <input
+                    type="text"
+                    placeholder="Search people to invite..."
+                    value={groupSearch}
+                    onChange={(e) => setGroupSearch(e.target.value)}
+                  />
+                </div>
+                <div className="create-group-user-list">
+                  {filteredGroupUsers.map((u) => {
+                    const selected = selectedGroupUserIds.has(u.id);
+                    const liveStatus = getPresenceStatus(u.id) ?? u.status ?? 'deactive';
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className={`create-group-user-item ${selected ? 'selected' : ''}`}
+                        onClick={() => toggleSelectGroupUser(u.id)}
+                      >
+                        <Avatar user={{ ...u, status: liveStatus }} size={32} />
+                        <span className="create-group-user-name">{u.username}</span>
+                        {selected && <span className="create-group-user-selected-indicator">Added</span>}
+                      </button>
+                    );
+                  })}
+                  {filteredGroupUsers.length === 0 && (
+                    <div className="create-group-empty">No people match your search</div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button type="submit" className="btn-primary">Create group</button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateGroupModal(false)}
+                  className="btn-outline"
+                >
                   Cancel
                 </button>
               </div>

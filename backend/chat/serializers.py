@@ -3,7 +3,7 @@ Trutim API Serializers
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Room, Message, MessageRead, CallSession
+from .models import Room, Message, MessageRead, CallSession, Channel
 
 User = get_user_model()
 
@@ -82,7 +82,7 @@ class RoomCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ['id', 'name', 'description', 'avatar']
+        fields = ['id', 'name', 'description', 'avatar', 'is_group']
         read_only_fields = ['id']
         extra_kwargs = {'description': {'required': False, 'allow_blank': True}}
 
@@ -106,7 +106,7 @@ class RoomSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Room
-        fields = ['id', 'name', 'description', 'avatar', 'created_by', 'created_at', 'is_direct', 'member_count', 'last_message', 'dm_user']
+        fields = ['id', 'name', 'description', 'avatar', 'created_by', 'created_at', 'is_direct', 'is_group', 'member_count', 'last_message', 'dm_user']
         read_only_fields = ['created_by', 'created_at']
 
     def to_representation(self, instance):
@@ -138,20 +138,35 @@ class RoomSerializer(serializers.ModelSerializer):
 
 
 class RoomDetailSerializer(RoomSerializer):
-    """Room serializer with members list for detail view."""
+    """Room serializer with members list and channels for detail view."""
     members = UserMinimalSerializer(many=True, read_only=True)
+    channels = serializers.SerializerMethodField()
 
     class Meta(RoomSerializer.Meta):
-        fields = RoomSerializer.Meta.fields + ['members']
+        fields = RoomSerializer.Meta.fields + ['members', 'channels']
+
+    def get_channels(self, obj):
+        """List of channels for this room (company)."""
+        channels = obj.channels.all().order_by('created_at')
+        return [
+            {
+                'id': ch.id,
+                'name': ch.name,
+                'description': ch.description,
+                'is_default': ch.is_default,
+            }
+            for ch in channels
+        ]
 
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserMinimalSerializer(read_only=True)
     read_by = serializers.SerializerMethodField()
+    channel = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Message
-        fields = ['id', 'room', 'sender', 'parent', 'content', 'created_at', 'edited_at', 'reactions', 'read_by']
+        fields = ['id', 'room', 'channel', 'sender', 'parent', 'content', 'created_at', 'edited_at', 'reactions', 'read_by']
 
     def get_read_by(self, obj):
         """List of user IDs who have read this message."""

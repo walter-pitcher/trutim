@@ -34,6 +34,8 @@ export default function Room({ type = 'company' }) {
   const { theme } = useTheme();
   const token = localStorage.getItem('access');
   const [room, setRoom] = useState(null);
+  const [channels, setChannels] = useState([]);
+  const [currentChannelId, setCurrentChannelId] = useState(null);
   const [msgList, setMsgList] = useState([]);
   const [input, setInput] = useState('');
   const [presence, setPresence] = useState([]);
@@ -65,6 +67,29 @@ export default function Room({ type = 'company' }) {
     }
   }, [roomIdParam, contactUserId, navigate]);
 
+  // Load channels for company rooms and ensure a default channel exists.
+  useEffect(() => {
+    if (!room || type !== 'company') return;
+    // Prefer channels coming from the room detail serializer if present.
+    const initial = Array.isArray(room.channels) ? room.channels : [];
+    if (initial.length) {
+      setChannels(initial);
+      setCurrentChannelId((prev) => prev ?? initial[0]?.id ?? null);
+      return;
+    }
+    rooms.channels
+      .list(room.id)
+      .then(({ data }) => {
+        const list = data || [];
+        setChannels(list);
+        setCurrentChannelId((prev) => prev ?? (list[0]?.id ?? null));
+      })
+      .catch(() => {
+        setChannels([]);
+        setCurrentChannelId(null);
+      });
+  }, [room, type]);
+
   useEffect(() => {
     const handler = (e) => {
       if (e.detail?.id === room?.id) setRoom(e.detail);
@@ -75,16 +100,37 @@ export default function Room({ type = 'company' }) {
 
   useEffect(() => {
     if (room) {
-      messages.list(room.id).then(({ data }) => {
+      const channelIdToUse = type === 'company' ? currentChannelId : null;
+      messages.list(room.id, channelIdToUse).then(({ data }) => {
         const sorted = [...(data || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
         setMsgList(sorted);
       });
     }
-  }, [room]);
+  }, [room, type, currentChannelId]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!room || type !== 'company') return;
+      const { roomId, channel } = e.detail || {};
+      if (roomId !== room.id || !channel) return;
+      setChannels((prev) => {
+        const exists = prev.some((c) => c.id === channel.id);
+        if (exists) return prev;
+        return [...prev, channel];
+      });
+      setCurrentChannelId((prev) => prev ?? channel.id);
+    };
+    window.addEventListener('channel-created', handler);
+    return () => window.removeEventListener('channel-created', handler);
+  }, [room, type]);
 
   const handleSocketMessage = (data) => {
     if (data.type === 'message') {
       const msg = data.message;
+      // For company rooms with channels, ignore messages from other channels.
+      if (type === 'company' && currentChannelId && msg.channel && msg.channel !== currentChannelId) {
+        return;
+      }
       const isFromOthers = msg?.sender?.id !== user?.id;
       if (isFromOthers) {
         notifyNewMessage(msg.sender?.username || 'Someone', msg.content, type === 'contact' && room?.dm_user ? room.dm_user.username : room?.name || 'Chat');
@@ -211,6 +257,11 @@ export default function Room({ type = 'company' }) {
       payload.parent = replyTo.id;
     }
 
+    // For company rooms, send the current channel so the backend can associate it.
+    if (type === 'company' && currentChannelId) {
+      payload.channel = currentChannelId;
+    }
+
     send(payload);
     send({ type: 'typing', typing: false });
 
@@ -318,8 +369,10 @@ export default function Room({ type = 'company' }) {
 
   if (!room) return <div className="room-loading">Loading...</div>;
 
+  const isCompany = type === 'company';
+
   return (
-    <div className="room-page" key={effectiveRoomId}>
+    <div className={`room-page ${isCompany ? 'room-page-company' : ''}`} key={effectiveRoomId}>
       {contextMenu && (
         <div
           className="message-context-menu"
@@ -430,6 +483,30 @@ export default function Room({ type = 'company' }) {
       </header>
 
       <div className="room-content">
+        {isCompany && (
+          <aside className="room-channel-sidebar">
+            <div className="room-channel-header">
+              <span className="room-channel-title">Channels</span>
+            </div>
+            <ul className="room-channel-list">
+              {channels.map((ch) => (
+                <li key={ch.id}>
+                  <button
+                    type="button"
+                    className={`room-channel-item ${currentChannelId === ch.id ? 'active' : ''}`}
+                    onClick={() => setCurrentChannelId(ch.id)}
+                  >
+                    <span className="room-channel-hash">#</span>
+                    <span className="room-channel-name">{ch.name}</span>
+                  </button>
+                </li>
+              ))}
+              {channels.length === 0 && (
+                <li className="room-channel-empty">No channels yet</li>
+              )}
+            </ul>
+          </aside>
+        )}
         <div className="messages-panel">
           <div className="messages-panel-decorative">
             <DecorativeSvg variant="compact" />
@@ -475,11 +552,13 @@ export default function Room({ type = 'company' }) {
                     msg.parent != null ? messageById.get(msg.parent) : null;
                   const reactions = msg.reactions || {};
                   const hasReactions = Object.keys(reactions).length > 0;
+                  const isOwn = msg.sender?.id === user?.id;
+                  const isDirectChat = type === 'contact';
 
                   return (
                     <div
                       key={msg.id}
-                      className={`message-row ${msg.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
+                      className={`message-row ${isDirectChat && isOwn ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
                     >
                       {!item.isGrouped && (
                         <div className="message-avatar">
@@ -490,7 +569,7 @@ export default function Room({ type = 'company' }) {
                         className={`message ${msg.isNew ? 'message-new' : ''}`}
                         onContextMenu={(e) => handleMessageContextMenu(e, item)}
                       >
-                        {type === 'company' && !item.isGrouped && msg.sender?.id !== user?.id && (
+                        {type !== 'contact' && !item.isGrouped && msg.sender?.id !== user?.id && (
                           <span className="msg-sender">{msg.sender?.username || 'Unknown'}</span>
                         )}
                         <span className="msg-time-top" title={new Date(msg.created_at).toLocaleString()}>

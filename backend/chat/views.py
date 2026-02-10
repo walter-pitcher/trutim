@@ -15,7 +15,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from .models import Room, Message, MessageRead, CallSession
+from .models import Room, Message, MessageRead, CallSession, Channel
 from .serializers import UserSerializer, RoomSerializer, RoomDetailSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
 
 User = get_user_model()
@@ -112,6 +112,17 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         room = serializer.save(created_by=self.request.user)
         room.members.add(self.request.user)
+        # Ensure each company room starts with a default "#general" channel.
+        if not room.is_direct:
+            Channel.objects.get_or_create(
+                room=room,
+                name='general',
+                defaults={
+                    'description': 'General discussion',
+                    'is_default': True,
+                    'created_by': self.request.user,
+                },
+            )
 
     def update(self, request, *args, **kwargs):
         """Only allow company (non-direct) room updates by the owner."""
@@ -164,22 +175,112 @@ class RoomViewSet(viewsets.ModelViewSet):
         room.members.remove(request.user)
         return Response({'status': 'left'})
 
+    @action(detail=True, methods=['post'], url_path='invite')
+    def invite(self, request, pk=None):
+        """
+        Invite one or more users into a room (company or group).
+        Body: { "user_ids": [1, 2, 3] }
+        """
+        room = self.get_object()
+        if room.is_direct:
+            return Response({'detail': 'Cannot invite users to a direct message room.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list) or not user_ids:
+            return Response({'detail': 'user_ids must be a non-empty list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        valid_ids = [uid for uid in user_ids if isinstance(uid, int) or (isinstance(uid, str) and uid.isdigit())]
+        if not valid_ids:
+            return Response({'detail': 'No valid user ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normalize to ints
+        valid_ids = [int(uid) for uid in valid_ids if int(uid) != request.user.id]
+        if not valid_ids:
+            return Response({'detail': 'No users to invite.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        added = []
+        for u in User.objects.filter(id__in=valid_ids).exclude(id__in=room.members.values_list('id', flat=True)):
+            room.members.add(u)
+            added.append(u.id)
+
+        serializer = RoomDetailSerializer(room, context={'request': request})
+        return Response({'added': added, 'room': serializer.data})
+
+    @action(detail=True, methods=['get', 'post'], url_path='channels')
+    def channels(self, request, pk=None):
+        """
+        List or create channels within a company room.
+
+        GET: return all channels for this room. If none exist for a non-direct room,
+        automatically create a default "#general" channel.
+        POST: create a new channel: { "name": "...", "description": "..." }.
+        """
+        room = self.get_object()
+        if room.is_direct:
+            return Response({'detail': 'Channels are only available for company rooms.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.method == 'GET':
+            # Auto-bootstrap a default channel if the company has none.
+            if not room.channels.exists():
+                Channel.objects.create(
+                    room=room,
+                    name='general',
+                    description='General discussion',
+                    is_default=True,
+                    created_by=request.user,
+                )
+            channels = room.channels.all().order_by('created_at')
+            data = [
+                {
+                    'id': ch.id,
+                    'name': ch.name,
+                    'description': ch.description,
+                    'is_default': ch.is_default,
+                }
+                for ch in channels
+            ]
+            return Response(data)
+
+        # POST – create a new channel
+        name = (request.data.get('name') or '').strip()
+        description = (request.data.get('description') or '').strip()
+        if not name:
+            return Response({'error': 'Channel name is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if room.channels.filter(name__iexact=name).exists():
+            return Response({'error': 'Channel with this name already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        ch = Channel.objects.create(
+            room=room,
+            name=name,
+            description=description,
+            created_by=request.user,
+        )
+        return Response(
+            {
+                'id': ch.id,
+                'name': ch.name,
+                'description': ch.description,
+                'is_default': ch.is_default,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
 
     def get_queryset(self):
         """
-        For list views, optionally filter by ?room=<id>.
+        For list views, optionally filter by ?room=<id> and ?channel=<id>.
         For detail / actions (e.g. react), allow lookup by pk as long as the
-        current user is a member of the room. Previously this returned an
-        empty queryset when no ?room was provided, which caused 404s for
-        routes like /messages/<id>/react/.
+        current user is a member of the room.
         """
         base_qs = Message.objects.filter(room__members=self.request.user)
         room_id = self.request.query_params.get('room')
+        channel_id = self.request.query_params.get('channel')
         if room_id:
-            return base_qs.filter(room_id=room_id)
+            base_qs = base_qs.filter(room_id=room_id)
+        if channel_id:
+            base_qs = base_qs.filter(channel_id=channel_id)
         return base_qs
 
     def get_object(self):

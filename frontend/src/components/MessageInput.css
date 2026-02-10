@@ -225,11 +225,45 @@
   cursor: pointer;
   transition: all var(--transition);
   opacity: 0.7;
+  transform-origin: center;
+  transform: translateZ(0);
 }
 
 .quick-emoji-btn:hover {
   opacity: 1;
   background: var(--bg-hover);
+  animation: quick-emoji-wiggle 0.35s ease-out;
+}
+
+.quick-emoji-btn:active {
+  animation: quick-emoji-pop 0.25s ease-out;
+}
+
+@keyframes quick-emoji-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes quick-emoji-wiggle {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  30% {
+    transform: rotate(-8deg) scale(1.05);
+  }
+  60% {
+    transform: rotate(6deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
 }
 
 .message-input-form .btn-send {

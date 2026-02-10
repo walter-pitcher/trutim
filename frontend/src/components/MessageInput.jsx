@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import EmojiPicker from './EmojiPicker';
-import { FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon, ImageIcon } from './icons';
+import { FileIcon, LinkIcon, TypeIcon, SmileIcon, SendArrowIcon, CalendarIcon, ImageIcon } from './icons';
 import AIImageModal from './AIImageModal';
 import { markdownToHtml, htmlToMarkdown } from '../utils/richInput';
 import './MessageInput.css';
@@ -108,31 +108,6 @@ export default function MessageInput({
     range.setEndAfter(wrapper);
     sel.removeAllRanges();
     sel.addRange(range);
-    syncToMarkdown();
-  };
-
-  const insertGitBlock = () => {
-    savedRangeRef.current = saveSelection();
-    const el = editorRef.current;
-    if (!el) return;
-    el.focus();
-    const sel = window.getSelection();
-    if (sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const selected = range.toString() || ' ';
-    const pre = document.createElement('pre');
-    pre.className = 'msg-input-code';
-    pre.setAttribute('data-lang', 'git');
-    const code = document.createElement('code');
-    code.textContent = selected.trim();
-    pre.appendChild(code);
-    range.deleteContents();
-    range.insertNode(pre);
-    range.setStartAfter(pre);
-    range.setEndAfter(pre);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    setShowFontSize(false);
     syncToMarkdown();
   };
 
@@ -399,9 +374,6 @@ export default function MessageInput({
               <SmileIcon size={18} />
             </button>
             <EmojiPicker onSelect={addEmoji} visible={showEmoji} onClose={() => setShowEmoji(false)} anchorRef={emojiAnchorRef} theme={theme} />
-            <button type="button" onMouseDown={keepFocus} onClick={insertGitBlock} className="toolbar-btn" title="Git block">
-              <GitBranchIcon size={18} />
-            </button>
           </div>
         )}
         <div className="input-wrapper">

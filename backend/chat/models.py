@@ -44,15 +44,35 @@ class Room(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     members = models.ManyToManyField(User, related_name='rooms', blank=True)
     is_direct = models.BooleanField(default=False)  # 1-on-1 chat
+    is_group = models.BooleanField(default=False)  # Custom group chat (sidebar "Groups")
 
     class Meta:
         db_table = 'trutim_rooms'
         ordering = ['-created_at']
 
 
+class Channel(models.Model):
+    """Channel within a company room (e.g. #general, #dev, #design)."""
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='channels')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    is_default = models.BooleanField(default=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_channels')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trutim_channels'
+        unique_together = [('room', 'name')]
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f'#{self.name} ({self.room.name})'
+
+
 class Message(models.Model):
-    """Chat message with emoji support and reply threading."""
+    """Chat message with emoji support, reply threading and channels."""
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='messages')
+    channel = models.ForeignKey(Channel, on_delete=models.SET_NULL, null=True, blank=True, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     content = models.TextField()

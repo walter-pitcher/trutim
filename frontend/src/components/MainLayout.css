@@ -645,6 +645,41 @@ a.sidebar-item {
   z-index: 199;
 }
 
+/* Company / group context menu (right–click on sidebar items) */
+.company-context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 180px;
+  padding: 0.35rem 0;
+  background: var(--bg-elevated, var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+}
+
+.company-context-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.company-context-item:hover {
+  background: var(--bg-hover);
+}
+
+.company-context-icon {
+  flex-shrink: 0;
+}
+
 .user-dropdown {
   position: absolute;
   top: calc(100% + 0.5rem);
@@ -800,6 +835,10 @@ a.sidebar-item {
   animation: modalIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.modal-content-large {
+  max-width: 720px;
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -893,6 +932,117 @@ a.sidebar-item {
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+/* Create group modal */
+.create-group-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.create-group-invite-section {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+}
+
+.create-group-invite-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.create-group-invite-header span {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.create-group-invite-header input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.create-group-invite-header input::placeholder {
+  color: var(--text-muted);
+}
+
+.create-group-user-list {
+  margin-top: 0.6rem;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.create-group-user-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.create-group-user-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.create-group-user-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.create-group-user-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), transform 0.08s ease-out;
+  text-align: left;
+}
+
+.create-group-user-item:hover {
+  background: var(--bg-hover);
+}
+
+.create-group-user-item.selected {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+}
+
+.create-group-user-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.create-group-user-selected-indicator {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.create-group-empty {
+  padding: 0.5rem 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* ========== RESPONSIVE ========== */

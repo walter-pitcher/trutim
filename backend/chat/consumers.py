@@ -116,7 +116,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             content = data.get('content', '').strip()
             if content:
                 parent_id = data.get('parent')
-                msg = await self.save_message(content, parent_id=parent_id)
+                channel_id = data.get('channel')
+                msg = await self.save_message(content, parent_id=parent_id, channel_id=channel_id)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {'type': 'chat_message', 'message': msg}
@@ -199,17 +200,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return marked
 
     @database_sync_to_async
-    def save_message(self, content, parent_id=None):
-        from .models import Message, Room
+    def save_message(self, content, parent_id=None, channel_id=None):
+        from .models import Message, Room, Channel
         room = Room.objects.get(id=self.room_id)
         parent = Message.objects.filter(id=parent_id, room=room).first() if parent_id else None
-        msg = Message.objects.create(room=room, sender=self.user, content=content, parent=parent, message_type='text')
+        channel = None
+        if channel_id is not None:
+            channel = Channel.objects.filter(id=channel_id, room=room).first()
+        msg = Message.objects.create(
+            room=room,
+            channel=channel,
+            sender=self.user,
+            content=content,
+            parent=parent,
+            message_type='text',
+        )
         return {
             'id': msg.id,
             'content': msg.content,
             'parent': parent_id if parent else None,
             'created_at': msg.created_at.isoformat(),
             'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
+            'channel': msg.channel_id,
             'reactions': msg.reactions or {},
             'read_by': []
         }
@@ -230,6 +242,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'created_at': msg.created_at.isoformat(),
             'edited_at': msg.edited_at.isoformat() if msg.edited_at else None,
             'sender': {'id': self.user.id, 'username': self.user.username, 'title': self.user.title or ''},
+            'channel': msg.channel_id,
             'reactions': msg.reactions or {},
             'read_by': list(msg.reads.values_list('user_id', flat=True))
         }

@@ -67,10 +67,21 @@ export const rooms = {
   get: (id) => API.get(`/rooms/${id}/`),
   join: (id) => API.post(`/rooms/${id}/join/`),
   leave: (id) => API.post(`/rooms/${id}/leave/`),
+  channels: {
+    list: (roomId) => API.get(`/rooms/${roomId}/channels/`),
+    create: (roomId, data) => API.post(`/rooms/${roomId}/channels/`, data),
+  },
+  invite: (roomId, userIds) => API.post(`/rooms/${roomId}/invite/`, { user_ids: userIds }),
 };
 
 export const messages = {
-  list: (roomId) => API.get('/messages/', { params: { room: roomId } }),
+  list: (roomId, channelId) =>
+    API.get('/messages/', {
+      params: {
+        room: roomId,
+        ...(channelId ? { channel: channelId } : {}),
+      },
+    }),
   react: (id, emoji) => API.post(`/messages/${id}/react/`, { emoji }),
   markRead: (roomId, messageIds) =>
     API.post('/messages/mark-read/', { room_id: roomId, message_ids: messageIds }),

@@ -12,7 +12,7 @@ export function markdownToHtml(md) {
   html = html.replace(/```(\w*)\r?\n([\s\S]*?)```/g, (_, lang, code) => {
     const codeEsc = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     if (lang === 'flowdiagram') {
-      return `<span class="msg-input-flowdiagram" contenteditable="false" data-flowdiagram="${codeEsc}" title="Double-click to edit diagram">📊 Diagram</span>`;
+      return `<span class="msg-input-flowdiagram" contenteditable="false" data-flowdiagram="${codeEsc}" title="Diagram">📊 Diagram</span>`;
     }
     return `<pre class="msg-input-code" data-lang="${lang || ''}"><code>${codeEsc}</code></pre>`;
   });

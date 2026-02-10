@@ -11,7 +11,7 @@ import ShareCodePanel from '../components/ShareCodePanel';
 import VideoCall from '../components/VideoCall';
 import Avatar from '../components/Avatar';
 import DecorativeSvg from '../components/DecorativeSvg';
-import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CheckIcon, CheckDoubleIcon, CodeIcon } from '../components/icons';
+import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CodeIcon } from '../components/icons';
 
 function formatDateLabel(date) {
   const d = new Date(date);
@@ -42,6 +42,7 @@ export default function Room({ type = 'company' }) {
   const [showShareCodePanel, setShowShareCodePanel] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
   const messagesEndRef = useRef(null);
   const messagesStartRef = useRef(null);
   const prevMsgCountRef = useRef(0);
@@ -244,6 +245,16 @@ export default function Room({ type = 'company' }) {
 
   const quickEmojis = ['👍', '❤️', '😂', '🔥', '👏', '🚀', '💯', '✨'];
 
+  const messageById = useMemo(() => {
+    const map = new Map();
+    msgList.forEach((m) => {
+      if (m?.id != null) {
+        map.set(m.id, m);
+      }
+    });
+    return map;
+  }, [msgList]);
+
   const messageItems = useMemo(() => {
     const items = [];
     let lastDate = null;
@@ -274,10 +285,105 @@ export default function Room({ type = 'company' }) {
     }
   };
 
+  const MENU_HEIGHT_EST = 260;
+  const MENU_WIDTH_EST = 180;
+  const handleMessageContextMenu = useCallback((e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const spaceBelow = window.innerHeight - e.clientY;
+    const spaceRight = window.innerWidth - e.clientX;
+    const openUpward = spaceBelow < MENU_HEIGHT_EST;
+    const openLeftward = spaceRight < MENU_WIDTH_EST;
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      message: item.message,
+      openUpward,
+      openLeftward,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    const handleClick = () => close();
+    const handleEscape = (e) => e.key === 'Escape' && close();
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [contextMenu]);
+
   if (!room) return <div className="room-loading">Loading...</div>;
 
   return (
     <div className="room-page" key={effectiveRoomId}>
+      {contextMenu && (
+        <div
+          className="message-context-menu"
+          style={{
+            ...(contextMenu.openLeftward
+              ? { right: window.innerWidth - contextMenu.x }
+              : { left: contextMenu.x }),
+            ...(contextMenu.openUpward
+              ? { bottom: window.innerHeight - contextMenu.y }
+              : { top: contextMenu.y }),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              handleReply(contextMenu.message);
+              setContextMenu(null);
+            }}
+          >
+            <ReplyIcon size={16} /> Reply
+          </button>
+          <div className="context-menu-divider">Add reaction</div>
+          <div className="context-menu-reactions">
+            {quickEmojis.slice(0, 5).map((e) => (
+              <button
+                key={e}
+                type="button"
+                className="context-menu-emoji"
+                onClick={() => {
+                  addReaction(contextMenu.message.id, e);
+                  setContextMenu(null);
+                }}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+          {contextMenu.message.sender?.id === user?.id && (
+            <>
+              <div className="context-menu-divider" />
+              <button
+                type="button"
+                onClick={() => {
+                  handleEdit(contextMenu.message);
+                  setContextMenu(null);
+                }}
+              >
+                <EditIcon size={16} /> Edit
+              </button>
+              <button
+                type="button"
+                className="context-menu-danger"
+                onClick={() => {
+                  handleDelete(contextMenu.message);
+                  setContextMenu(null);
+                }}
+              >
+                <TrashIcon size={16} /> Delete
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {showShareCodePanel && (
         <ShareCodePanel
           isOpen={showShareCodePanel}
@@ -363,94 +469,78 @@ export default function Room({ type = 'company' }) {
                   <span>{formatDateLabel(item.date)}</span>
                 </div>
               ) : (
-                <div
-                  key={item.message.id}
-                  className={`message-row ${item.message.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
-                >
-                  {!item.isGrouped && (
-                    <div className="message-avatar">
-                      <Avatar user={item.message.sender} size={36} showStatus={false} />
-                    </div>
-                  )}
-                  <div
-                    className={`message ${item.message.isNew ? 'message-new' : ''}`}
-                  >
-                    {type === 'company' && !item.isGrouped && item.message.sender?.id !== user?.id && (
-                      <span className="msg-sender">{item.message.sender?.username || 'Unknown'}</span>
-                    )}
-                    <span className="msg-time-top" title={new Date(item.message.created_at).toLocaleString()}>
-                      {new Date(item.message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      {item.message.isNew && <span className="message-badge-new">New</span>}
-                    </span>
-                    <div className="message-body">
-                      <MessageContent content={item.message.content} theme={theme} />
-                    </div>
-                    <div className="message-footer">
-                      <div className="message-reactions">
-                        {item.message.reactions && Object.entries(item.message.reactions).map(([emoji, ids]) => (
-                          <button
-                            key={emoji}
-                            className="reaction"
-                            onClick={() => addReaction(item.message.id, emoji)}
-                            title="Toggle reaction"
-                          >
-                            {emoji} {ids.length}
-                          </button>
-                        ))}
-                        <span className="reaction-add" title="Add reaction">
-                          {quickEmojis.slice(0, 5).map((e) => (
-                            <button
-                              key={e}
-                              onClick={() => addReaction(item.message.id, e)}
-                              className="reaction-btn"
-                            >
-                              {e}
-                            </button>
-                          ))}
+                (() => {
+                  const msg = item.message;
+                  const parent =
+                    msg.parent != null ? messageById.get(msg.parent) : null;
+                  const reactions = msg.reactions || {};
+                  const hasReactions = Object.keys(reactions).length > 0;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`message-row ${msg.sender?.id === user?.id ? 'own' : ''} ${item.isGrouped ? 'grouped' : ''}`}
+                    >
+                      {!item.isGrouped && (
+                        <div className="message-avatar">
+                          <Avatar user={msg.sender} size={36} showStatus={false} />
+                        </div>
+                      )}
+                      <div
+                        className={`message ${msg.isNew ? 'message-new' : ''}`}
+                        onContextMenu={(e) => handleMessageContextMenu(e, item)}
+                      >
+                        {type === 'company' && !item.isGrouped && msg.sender?.id !== user?.id && (
+                          <span className="msg-sender">{msg.sender?.username || 'Unknown'}</span>
+                        )}
+                        <span className="msg-time-top" title={new Date(msg.created_at).toLocaleString()}>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {msg.isNew && <span className="message-badge-new">New</span>}
                         </span>
-                      </div>
-                      <div className="message-actions">
-                        {item.message.sender?.id === user?.id && (
-                          <span className="msg-read-status" title={(item.message.read_by || []).length > 0 ? 'Seen by receiver' : 'Sent'}>
-                            {(item.message.read_by || []).length > 0 ? (
-                              <CheckDoubleIcon size={14} className="msg-read-seen" />
-                            ) : (
-                              <CheckIcon size={14} className="msg-read-sent" />
-                            )}
-                          </span>
+                        {parent && (
+                          <button
+                            type="button"
+                            className="message-reply-preview"
+                            title={(parent.content || '').replace(/\s+/g, ' ').slice(0, 120)}
+                          >
+                            <span className="message-reply-snippet">
+                              {(parent.content || '').replace(/\s+/g, ' ').slice(0, 120)}
+                            </span>
+                          </button>
                         )}
-                        <button
-                          type="button"
-                          className="message-action-btn"
-                          onClick={() => handleReply(item.message)}
-                          title="Reply"
-                        >
-                          <ReplyIcon size={16} />
-                        </button>
-                        {item.message.sender?.id === user?.id && (
-                          <>
-                            <button
-                              type="button"
-                              className="message-action-btn"
-                              onClick={() => handleEdit(item.message)}
-                              title="Edit message"
-                            >
-                              <EditIcon size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              className="message-action-btn message-action-danger"
-                              onClick={() => handleDelete(item.message)}
-                              title="Delete message"
-                            >
-                              <TrashIcon size={16} />
-                            </button>
-                          </>
+                        <div className="message-body">
+                          <MessageContent content={msg.content} theme={theme} />
+                        </div>
+                        {hasReactions && (
+                          <div className="message-reactions">
+                            {Object.entries(reactions).map(([emoji, userIds]) => {
+                              const ids = Array.isArray(userIds) ? userIds : [];
+                              const mine = user && ids.includes(user.id);
+                              const count = ids.length;
+                              if (!emoji || !count) return null;
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  className={`message-reaction-pill ${mine ? 'mine' : ''}`}
+                                  onClick={() => addReaction(msg.id, emoji)}
+                                  title={
+                                    mine
+                                      ? 'Click to remove your reaction'
+                                      : 'Click to add your reaction'
+                                  }
+                                >
+                                  <span className="message-reaction-emoji">{emoji}</span>
+                                  <span className="message-reaction-count">{count}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()
               )
             )}
             {typingUsers.size > 0 && (

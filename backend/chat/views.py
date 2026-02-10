@@ -8,10 +8,13 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import get_object_or_404
 from django.core.files.storage import default_storage
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from .models import Room, Message, MessageRead, CallSession
 from .serializers import UserSerializer, RoomSerializer, RoomDetailSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
 
@@ -166,10 +169,33 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
 
     def get_queryset(self):
+        """
+        For list views, optionally filter by ?room=<id>.
+        For detail / actions (e.g. react), allow lookup by pk as long as the
+        current user is a member of the room. Previously this returned an
+        empty queryset when no ?room was provided, which caused 404s for
+        routes like /messages/<id>/react/.
+        """
+        base_qs = Message.objects.filter(room__members=self.request.user)
         room_id = self.request.query_params.get('room')
         if room_id:
-            return Message.objects.filter(room_id=room_id, room__members=self.request.user)
-        return Message.objects.none()
+            return base_qs.filter(room_id=room_id)
+        return base_qs
+
+    def get_object(self):
+        """
+        Ensure that detail routes like /messages/<id>/react/ always look up the
+        message by primary key within rooms the current user is a member of,
+        regardless of any missing ?room=<id> filter in the query params.
+        This avoids 404s for actions such as `react` that operate on an
+        individual message.
+        """
+        lookup_value = self.kwargs.get(self.lookup_field or 'pk')
+        return get_object_or_404(
+            Message,
+            pk=lookup_value,
+            room__members=self.request.user,
+        )
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
@@ -205,7 +231,24 @@ class MessageViewSet(viewsets.ModelViewSet):
             del reactions[emoji]
         msg.reactions = reactions
         msg.save()
-        return Response(MessageSerializer(msg).data)
+        serialized = MessageSerializer(msg, context={'request': request}).data
+
+        # Broadcast reaction updates to all WebSocket clients in this room.
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer is not None:
+                async_to_sync(channel_layer.group_send)(
+                    f'chat_{msg.room_id}',
+                    {
+                        'type': 'chat_message_reacted',
+                        'message': serialized,
+                    },
+                )
+        except Exception:
+            # WebSocket broadcast failures should not break the HTTP request.
+            pass
+
+        return Response(serialized)
 
     @action(detail=False, methods=['post'], url_path='mark-read')
     def mark_read(self, request):

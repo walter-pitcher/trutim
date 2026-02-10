@@ -363,26 +363,6 @@
   color: var(--text-subtle);
 }
 
-.message-row.own .message .message-content-inline-code {
-  background: var(--bg-tertiary);
-  color: inherit;
-  border-color: var(--border);
-}
-
-.message-row.own .message .message-content-code-block {
-  background: var(--bg-primary);
-  border-color: var(--border);
-  color: inherit;
-}
-
-.message-row.own .message .message-content-code-block code {
-  color: inherit;
-}
-
-.message-row.own .message .message-content-code-block .message-content-code-lang {
-  color: var(--text-muted);
-}
-
 .message-row.grouped .message {
   margin-top: 0.1rem;
   border-radius: 18px;
@@ -528,365 +508,200 @@
   letter-spacing: 0.01em;
 }
 
-.message-content-inner {
-  display: block;
-  /* Allow mixed inline + block content (text, code blocks, images) to flow properly */
-}
-
-.message-content-image-wrap {
-  display: block;
-  margin: 0.5rem 0;
-}
-
-.message-content-image {
-  max-width: 100%;
-  max-height: 320px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  object-fit: contain;
-  cursor: zoom-in;
-}
-
-.message-content-image-link:hover .message-content-image {
-  opacity: 0.95;
-}
-
-/* Image lightbox for full-size viewing */
-.message-content-lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.9);
+/* Reply preview inside a message bubble */
+.message-reply-preview {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 2rem;
-  cursor: zoom-out;
-}
-
-.message-content-lightbox-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--text);
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.2rem 0.45rem;
+  margin-bottom: 0.2rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  font-size: 0.72rem;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  opacity: 0.9;
+  transition: background var(--transition), transform 0.15s ease-out, opacity var(--transition);
 }
 
-.message-content-lightbox-close:hover {
+.message-reply-preview:hover {
   background: var(--bg-hover);
-  color: var(--text);
+  transform: translateY(-1px);
+  opacity: 1;
 }
 
-.message-content-lightbox-image {
-  max-width: 100%;
-  max-height: calc(100vh - 4rem);
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-  cursor: default;
-}
-
-.message-content-link {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.message-content-link:hover {
-  text-decoration: underline;
-}
-
-.message-content-caption {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-}
-
-.message-content-inline-code {
-  font-family: 'Fira Code', 'Consolas', monospace;
-  font-size: 0.88em;
-  padding: 0.15em 0.4em;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  border: 1px solid var(--border);
-}
-
-.message-content-code-wrap {
-  margin: 0.5rem 0;
-  position: relative;
-}
-
-.message-content-code-block {
-  display: block;
-  margin: 0;
-  padding: 0.75rem 1rem;
+.message-row.own .message-reply-preview {
+  border-left-color: var(--accent);
   background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  font-size: 0.85rem;
-  font-family: 'Fira Code', 'Consolas', monospace;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  position: relative;
-  cursor: pointer;
-  transition: font-family var(--transition);
 }
 
-.message-content-code-block.message-content-code-collapsed {
-  max-height: 15em;
-  overflow: hidden;
-}
-
-.message-content-code-fade {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4em;
-  background: linear-gradient(transparent, var(--bg-primary));
-  pointer-events: none;
-}
-
-.message-content-code-expand-btn {
-  display: block;
-  width: 100%;
-  padding: 0.4rem 1rem;
-  margin-top: 0.25rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+.message-reply-label {
+  font-weight: 600;
   color: var(--accent);
-  font-size: 0.8rem;
-  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.message-reply-snippet {
+  color: var(--text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Emoji reactions strip under each message */
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+}
+
+.message-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
+  font-size: 0.75rem;
+  color: var(--text-subtle);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    transform 0.15s ease-out,
+    background var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition),
+    color var(--transition);
+  animation: reactionPop 0.18s ease-out;
 }
 
-.message-content-code-expand-btn:hover {
+.message-reaction-pill:hover {
+  transform: translateY(-1px) scale(1.03);
+  background: var(--bg-tertiary);
+  border-color: var(--border-focus);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.message-reaction-pill.mine {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent-strong, var(--accent));
+  box-shadow: 0 0 0 1px var(--accent-muted);
+}
+
+.message-reaction-emoji {
+  font-size: 0.9rem;
+}
+
+.message-reaction-count {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes reactionPop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* MessageContent styling moved to MessageContent.css - own message overrides */
+.message-row.own .message .msg-content-inline-code {
+  background: var(--bg-tertiary);
+  color: inherit;
+  border-color: var(--border);
+}
+
+.message-row.own .message .msg-content-code-block {
+  background: var(--bg-primary);
+  border-color: var(--border);
+  color: inherit;
+}
+
+.message-row.own .message .msg-content-code-block code {
+  color: inherit;
+}
+
+.message-row.own .message .msg-content-code-lang {
+  color: var(--text-muted);
+}
+
+/* Message context menu (right-click) */
+.message-context-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  padding: 0.35rem 0;
   background: var(--bg-elevated);
-  color: var(--accent-hover, var(--accent));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
 }
 
-.message-content-code-block.has-lang {
-  padding-top: 1.75rem;
+.message-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition);
 }
 
-.message-content-code-block.font-normal {
-  font-family: inherit;
+.message-context-menu button:hover {
+  background: var(--bg-hover);
 }
 
-.message-content-code-block.font-normal code {
-  font-family: inherit;
+.message-context-menu .context-menu-danger:hover {
+  color: var(--danger);
 }
 
-.message-content-code-block code {
-  font-family: inherit;
-}
-
-.message-content-code-lang {
-  position: absolute;
-  top: 0.25rem;
-  right: 0.5rem;
-  font-size: 0.65rem;
+.context-menu-divider {
+  padding: 0.35rem 0.75rem 0.15rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-/* Mermaid diagram rendering */
-.message-content-mermaid-wrap {
-  margin: 0.5rem 0;
-  padding: 1rem;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow-x: auto;
-  min-width: 560px;
-  min-height: 420px;
-  max-width: 100%;
-}
-
-.message-content-mermaid {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 520px;
-  min-height: 380px;
-}
-
-.message-content-mermaid svg {
-  max-width: 100%;
-  width: auto;
-  min-width: 480px;
-  height: auto;
-}
-
-.message-content-mermaid-error {
-  padding: 0.75rem;
-  color: var(--danger);
-  font-size: 0.85rem;
-}
-
-.message-content-mermaid-loading {
-  padding: 0.75rem;
-  color: var(--text-subtle);
-  font-size: 0.9rem;
-}
-
-/* Flow diagram (React Flow) rendering */
-.message-content-flowdiagram-wrap {
-  margin: 0.5rem 0;
-  padding: 1rem;
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  min-width: 480px;
-  min-height: 360px;
-  max-width: 100%;
-}
-
-.message-content-flowdiagram-inner {
-  position: relative;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.message-content-flowdiagram-wrap .diagram-flow--view {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.message-content-flowdiagram-error {
-  padding: 0.75rem;
-  color: var(--danger);
-  font-size: 0.85rem;
-}
-
-.message-content-flowdiagram-loading {
-  padding: 0.75rem;
-  color: var(--text-subtle);
-  font-size: 0.9rem;
-}
-
-.message-footer {
-  margin-top: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.message-row.own .message .msg-read-status .msg-read-seen,
-.message-row.own .message .msg-read-status .msg-read-sent {
   color: var(--text-subtle);
 }
 
-.message-reactions {
-  margin-top: 0.5rem;
+.context-menu-reactions {
   display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.75rem 0.35rem;
 }
 
-.reaction {
-  font-size: 0.9rem;
-  padding: 0.2rem 0.5rem;
-  background: var(--bg-elevated);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform var(--transition);
-}
-
-.message-row.own .reaction {
-  background: var(--bg-elevated);
-}
-
-.reaction:hover {
-  transform: scale(1.05);
-}
-
-.reaction-add {
-  display: inline-flex;
-  gap: 0.15rem;
-  opacity: 0.6;
-}
-
-.message:hover .reaction-add,
-.reaction-add:hover {
-  opacity: 1;
-}
-
-.reaction-btn {
-  background: transparent;
-  font-size: 0.95rem;
-  padding: 0.2rem;
-  opacity: 0.8;
-  transition: opacity var(--transition);
-}
-
-.reaction-btn:hover {
-  opacity: 1;
-}
-
-.message-actions {
+.context-menu-emoji {
   display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  margin-left: auto;
-  opacity: 0.6;
-  transition: opacity var(--transition);
-}
-
-.message:hover .message-actions {
-  opacity: 1;
-}
-
-.message-action-btn {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem;
-  border-radius: 8px;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
   border: none;
+  border-radius: 8px;
   background: transparent;
-  color: var(--text-subtle);
+  font-size: 1.1rem;
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition);
 }
 
-.message-action-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
-}
-
-.message-row.own .message-action-btn {
-  color: var(--text-subtle);
-}
-
-.message-row.own .message-action-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text);
-}
-
-.message-action-danger:hover {
-  color: var(--danger);
-}
-
-.message-row.own .message-action-danger:hover {
-  background: var(--bg-elevated);
-  color: var(--danger);
+.context-menu-emoji:hover {
+  background: var(--bg-hover);
 }
 
 /* Typing indicator - conversational bubble */

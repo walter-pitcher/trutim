@@ -83,15 +83,17 @@ body {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text);
-  overflow: hidden;
+  /* Allow vertical scrolling so content and modals are never clipped on small screens */
+  overflow-x: hidden;
+  overflow-y: auto;
   line-height: 1.6;
   letter-spacing: -0.01em;
   transition: background var(--transition), color var(--transition);
 }
 
 #root {
-  height: 100%;
-  overflow: hidden;
+  /* Let the app grow beyond the viewport and scroll naturally */
+  min-height: 100vh;
 }
 
 code, .mono {

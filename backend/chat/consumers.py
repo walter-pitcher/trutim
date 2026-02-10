@@ -182,6 +182,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'type': 'message_read', 'message_ids': event['message_ids'], 'user': event['user']
         }))
 
+    async def chat_message_reacted(self, event):
+        # Reactions are treated as message updates on the client side.
+        await self.send(text_data=json.dumps({'type': 'message_updated', 'message': event['message']}))
+
     @database_sync_to_async
     def mark_messages_read(self, message_ids):
         from .models import Message, MessageRead

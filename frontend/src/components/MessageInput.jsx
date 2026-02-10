@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import EmojiPicker from './EmojiPicker';
-import { FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon, ImageIcon, ContentCreateIcon } from './icons';
+import { FileIcon, LinkIcon, TypeIcon, SmileIcon, GitBranchIcon, SendArrowIcon, CalendarIcon, ImageIcon } from './icons';
 import AIImageModal from './AIImageModal';
-import DiagramModal from './DiagramModal';
 import { markdownToHtml, htmlToMarkdown } from '../utils/richInput';
 import './MessageInput.css';
 
@@ -46,9 +45,6 @@ export default function MessageInput({
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showAIImageModal, setShowAIImageModal] = useState(false);
-  const [showDiagramModal, setShowDiagramModal] = useState(false);
-  const [diagramEditData, setDiagramEditData] = useState(null);
-  const diagramEditSpanRef = useRef(null);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [calendarTitle, setCalendarTitle] = useState('');
@@ -332,35 +328,41 @@ export default function MessageInput({
 
   return (
     <div className="message-input-container">
-      {(replyTo || isEditing) && (
-        <div className="message-context-bar">
-          <div className="message-context-main">
-            <span className="message-context-label">
-              {isEditing ? 'Editing message' : 'Replying to'}
-            </span>
-            {!isEditing && replyTo && (
-              <span className="message-context-target">
-                {replyTo.sender?.username || 'message'}
-              </span>
-            )}
-            {!isEditing && replyTo?.content && (
-              <span className="message-context-snippet">
-                {replyTo.content.slice(0, 80)}
-                {replyTo.content.length > 80 ? '…' : ''}
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            className="message-context-cancel"
-            onClick={isEditing ? onCancelEdit : onCancelReply}
-            aria-label="Cancel reply or edit"
-          >
-            ×
-          </button>
-        </div>
-      )}
       <form onSubmit={handleSubmit} className="message-input-form">
+        {(replyTo || isEditing) && (
+          <div className="message-context-bar">
+            <div className="message-context-main">
+              <span className="message-context-label">
+                {isEditing ? 'Editing' : 'Reply'}
+              </span>
+              {!isEditing && replyTo && (
+                <>
+                  <span className="message-context-target">
+                    {replyTo.sender?.username || 'Message'}
+                  </span>
+                  {replyTo.content && (
+                    <span className="message-context-snippet">
+                      {replyTo.content.replace(/\s+/g, ' ').slice(0, 80)}
+                    </span>
+                  )}
+                </>
+              )}
+              {isEditing && (
+                <span className="message-context-snippet">
+                  {(value || '').replace(/\s+/g, ' ').slice(0, 80)}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              className="message-context-cancel"
+              onClick={isEditing ? onCancelEdit : onCancelReply}
+              aria-label={isEditing ? 'Cancel editing' : 'Cancel reply'}
+            >
+              ×
+            </button>
+          </div>
+        )}
         {showToolbar && (
           <div className="message-toolbar-inline">
             <button type="button" onMouseDown={keepFocus} onClick={() => fileInputRef.current?.click()} className="toolbar-btn" title="Attach file">
@@ -369,9 +371,6 @@ export default function MessageInput({
             <input ref={fileInputRef} type="file" multiple className="file-input-hidden" onChange={handleFileSelect} />
             <button type="button" onMouseDown={keepFocus} onClick={() => setShowAIImageModal(true)} className="toolbar-btn" title="AI Generate Image">
               <ImageIcon size={18} />
-            </button>
-            <button type="button" onMouseDown={keepFocus} onClick={() => { diagramEditSpanRef.current = null; setDiagramEditData(null); setShowDiagramModal(true); }} className="toolbar-btn" title="Create diagram">
-              <ContentCreateIcon size={18} />
             </button>
             <button type="button" onMouseDown={keepFocus} onClick={openLinkModal} className="toolbar-btn" title="Insert link">
               <LinkIcon size={18} />
@@ -412,18 +411,6 @@ export default function MessageInput({
             suppressContentEditableWarning
             onInput={handleInput}
             onPaste={handlePaste}
-            onDoubleClick={(e) => {
-              const span = e.target.closest?.('.msg-input-flowdiagram');
-              if (span) {
-                const data = span.getAttribute('data-flowdiagram');
-                if (data) {
-                  e.preventDefault();
-                  diagramEditSpanRef.current = span;
-                  setDiagramEditData(data);
-                  setShowDiagramModal(true);
-                }
-              }
-            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -514,47 +501,6 @@ export default function MessageInput({
           onSend={(text) => {
             onSend?.(text);
             setShowAIImageModal(false);
-          }}
-          theme={theme}
-        />
-      )}
-
-      {showDiagramModal && (
-        <DiagramModal
-          onClose={() => setShowDiagramModal(false)}
-          initialData={diagramEditData}
-          onInsert={(flowData) => {
-            const el = editorRef.current;
-            if (el && flowData) {
-              el.focus();
-              const spanToReplace = diagramEditSpanRef.current;
-              const newSpan = document.createElement('span');
-              newSpan.className = 'msg-input-flowdiagram';
-              newSpan.setAttribute('contenteditable', 'false');
-              newSpan.setAttribute('data-flowdiagram', flowData.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
-              newSpan.setAttribute('title', 'Double-click to edit diagram');
-              newSpan.textContent = '📊 Diagram';
-              if (spanToReplace?.parentNode) {
-                spanToReplace.parentNode.replaceChild(newSpan, spanToReplace);
-              } else {
-                const sel = window.getSelection();
-                const range = sel?.rangeCount > 0 ? sel.getRangeAt(0) : null;
-                if (range) {
-                  range.deleteContents();
-                  range.insertNode(newSpan);
-                  range.setStartAfter(newSpan);
-                  range.setEndAfter(newSpan);
-                  sel.removeAllRanges();
-                  sel.addRange(range);
-                } else {
-                  el.appendChild(newSpan);
-                }
-              }
-              syncToMarkdown();
-            }
-            setShowDiagramModal(false);
-            setDiagramEditData(null);
-            diagramEditSpanRef.current = null;
           }}
           theme={theme}
         />

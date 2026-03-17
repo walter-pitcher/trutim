@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,9 +10,11 @@ import MessageInput from '../components/MessageInput';
 import MessageContent from '../components/MessageContent';
 import ShareCodePanel from '../components/ShareCodePanel';
 import VideoCall from '../components/VideoCall';
+import VoiceControlPanel from '../components/VoiceControlPanel';
 import Avatar from '../components/Avatar';
 import DecorativeSvg from '../components/DecorativeSvg';
-import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CodeIcon } from '../components/icons';
+import { VideoIcon, ArrowLeftIcon, ReplyIcon, EditIcon, TrashIcon, CodeIcon, MicIcon } from '../components/icons';
+import { useVoiceSocket } from '../hooks/useVoiceSocket';
 
 function formatDateLabel(date) {
   const d = new Date(date);
@@ -41,6 +44,7 @@ export default function Room({ type = 'company' }) {
   const [presence, setPresence] = useState([]);
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
   const [showShareCodePanel, setShowShareCodePanel] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -214,6 +218,17 @@ export default function Room({ type = 'company' }) {
       }
     });
   }, [room?.id, user?.id, msgList, scheduleMarkRead]);
+
+  // Voice control: connect to voice WebSocket for this room
+  const {
+    connected: voiceConnected,
+    listening: voiceListening,
+    detectorState: voiceDetectorState,
+    startListening: startVoiceListening,
+    stopListening: stopVoiceListening,
+    lastCommandResult: voiceLastCommand,
+    sendTextCommand: voiceSendTextCommand,
+  } = useVoiceSocket(effectiveRoomId, token);
 
   useEffect(() => {
     return () => {
@@ -437,24 +452,47 @@ export default function Room({ type = 'company' }) {
           )}
         </div>
       )}
-      {showShareCodePanel && (
-        <ShareCodePanel
-          isOpen={showShareCodePanel}
-          onClose={() => setShowShareCodePanel(false)}
-          onShare={(text) => {
-            sendMessage(text);
-            setShowShareCodePanel(false);
-          }}
-        />
+      {createPortal(
+        showShareCodePanel ? (
+          <ShareCodePanel
+            isOpen={showShareCodePanel}
+            onClose={() => setShowShareCodePanel(false)}
+            onShare={(text) => {
+              sendMessage(text);
+              setShowShareCodePanel(false);
+            }}
+          />
+        ) : null,
+        document.body
       )}
 
-      {showVideoCall && (
-        <VideoCall
-          roomId={effectiveRoomId}
-          token={token}
-          user={user}
-          onClose={() => setShowVideoCall(false)}
-        />
+      {createPortal(
+        showVideoCall ? (
+          <VideoCall
+            roomId={effectiveRoomId}
+            token={token}
+            user={user}
+            onClose={() => setShowVideoCall(false)}
+          />
+        ) : null,
+        document.body
+      )}
+
+      {createPortal(
+        showVoicePanel ? (
+          <VoiceControlPanel
+            isOpen={showVoicePanel}
+            onClose={() => setShowVoicePanel(false)}
+            connected={voiceConnected}
+            listening={voiceListening}
+            detectorState={voiceDetectorState}
+            startListening={startVoiceListening}
+            stopListening={stopVoiceListening}
+            lastCommandResult={voiceLastCommand}
+            sendTextCommand={voiceSendTextCommand}
+          />
+        ) : null,
+        document.body
       )}
 
       <header className="room-header">
@@ -475,6 +513,13 @@ export default function Room({ type = 'company' }) {
         <div className="room-actions">
           <button onClick={() => setShowShareCodePanel(true)} className="btn-icon" title="Share code">
             <CodeIcon size={20} />
+          </button>
+          <button
+            onClick={() => setShowVoicePanel(true)}
+            className={`btn-icon ${voiceListening ? 'active' : ''}`}
+            title="Voice control"
+          >
+            <MicIcon size={20} />
           </button>
           <button onClick={() => setShowVideoCall(true)} className="btn-icon" title="Video call">
             <VideoIcon size={20} />

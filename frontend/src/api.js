@@ -96,4 +96,16 @@ export const ai = {
   generateImage: (prompt) => API.post('/ai/image/', { prompt }),
 };
 
+// Voice control & keyword spotting API
+export const voice = {
+  systemInfo: () => API.get('/voice/system/'),
+  execute: (payload) => API.post('/voice/execute/', payload),
+  profileMe: () => API.get('/voice/profiles/me/'),
+  updateProfile: (data) => API.patch('/voice/profiles/update_settings/', data),
+  commandLogs: () => API.get('/voice/commands/log/'),
+  commandStats: () => API.get('/voice/commands/log/stats/'),
+  models: () => API.get('/voice/models/'),
+  activeModel: () => API.get('/voice/models/active/'),
+};
+
 export default API;

@@ -224,6 +224,9 @@ export default function Room({ type = 'company' }) {
     connected: voiceConnected,
     listening: voiceListening,
     detectorState: voiceDetectorState,
+    micLevel: voiceMicLevel,
+    captureError: voiceCaptureError,
+    isCapturing: voiceIsCapturing,
     startListening: startVoiceListening,
     stopListening: stopVoiceListening,
     lastCommandResult: voiceLastCommand,
@@ -486,6 +489,9 @@ export default function Room({ type = 'company' }) {
             connected={voiceConnected}
             listening={voiceListening}
             detectorState={voiceDetectorState}
+            micLevel={voiceMicLevel}
+            captureError={voiceCaptureError}
+            isCapturing={voiceIsCapturing}
             startListening={startVoiceListening}
             stopListening={stopVoiceListening}
             lastCommandResult={voiceLastCommand}

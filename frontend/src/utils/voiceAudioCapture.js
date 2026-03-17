@@ -52,26 +52,39 @@ function toBase64(bytes) {
 }
 
 /**
+ * Compute RMS (root mean square) of audio samples for level display
+ */
+function computeRms(float32) {
+  let sum = 0;
+  for (let i = 0; i < float32.length; i++) {
+    sum += float32[i] * float32[i];
+  }
+  return Math.sqrt(sum / float32.length);
+}
+
+/**
  * Start capturing microphone and streaming to the provided send function.
- * @param {Function} sendFn - (payload) => void, sends JSON or (bytes) => void for binary
- * @param {number} sampleRate - Browser's AudioContext sample rate (typically 48000 or 44100)
+ * @param {Function} sendFn - (payload) => void, sends JSON
+ * @param {Object} options - { onLevel?: (level: number) => void } - called with 0-1 level, throttled
  * @returns {Promise<{ stop: Function }>} - Object with stop() to end capture
  */
-export async function startVoiceCapture(sendFn, sampleRate = 48000) {
+export async function startVoiceCapture(sendFn, options = {}) {
+  const { onLevel } = options;
   const stream = await getUserMedia({ audio: true });
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
   const source = audioContext.createMediaStreamSource(stream);
 
-  // ScriptProcessorNode is deprecated but widely supported; buffer 4096 at 48k ≈ 85ms
   const bufferSize = 4096;
   const processor = audioContext.createScriptProcessor(bufferSize, 1, 1);
   const gainNode = audioContext.createGain();
-  gainNode.gain.value = 0; // Prevent mic feedback to speaker
+  gainNode.gain.value = 0;
   source.connect(processor);
   processor.connect(gainNode);
   gainNode.connect(audioContext.destination);
 
   const effectiveRate = audioContext.sampleRate;
+  let lastLevelTime = 0;
+  const LEVEL_THROTTLE_MS = 80;
 
   processor.onaudioprocess = (e) => {
     const input = e.inputBuffer.getChannelData(0);
@@ -79,6 +92,16 @@ export async function startVoiceCapture(sendFn, sampleRate = 48000) {
     const pcm16 = float32ToPcm16(resampled);
     const base64 = toBase64(pcm16);
     sendFn({ type: 'audio_data', data: base64, sample_rate: TARGET_SAMPLE_RATE });
+
+    if (onLevel) {
+      const now = Date.now();
+      if (now - lastLevelTime >= LEVEL_THROTTLE_MS) {
+        lastLevelTime = now;
+        const rms = computeRms(input);
+        const level = Math.min(1, rms * 8);
+        onLevel(level);
+      }
+    }
   };
 
   return {
@@ -86,6 +109,7 @@ export async function startVoiceCapture(sendFn, sampleRate = 48000) {
       processor.disconnect();
       source.disconnect();
       stream.getTracks().forEach((t) => t.stop());
+      onLevel?.(0);
     },
   };
 }

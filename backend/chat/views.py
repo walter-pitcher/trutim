@@ -1,0 +1,372 @@
+"""
+Trutim REST API Views
+"""
+import os
+import uuid
+from collections import defaultdict
+from rest_framework import viewsets, status, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.generics import get_object_or_404
+from django.core.files.storage import default_storage
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import get_user_model
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from .models import Room, Message, MessageRead, CallSession, Channel
+from .serializers import UserSerializer, RoomSerializer, RoomDetailSerializer, RoomCreateSerializer, MessageSerializer, CallSessionSerializer
+
+User = get_user_model()
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = UserSerializer(self.user).data
+        return data
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        title = request.data.get('title', '')
+
+        if not username or not password:
+            return Response({'error': 'Username and password required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Username already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.create_user(
+            username=username, email=email, password=password,
+            first_name=first_name, last_name=last_name, title=title
+        )
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        return User.objects.exclude(id=self.request.user.id)
+
+    @action(detail=False, methods=['get', 'patch'])
+    def me(self, request):
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user, data=request.data, partial=True, context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+        return Response(UserSerializer(request.user, context={'request': request}).data)
+
+    @action(detail=False, methods=['get'], url_path='location-stats')
+    def location_stats(self, request):
+        """Aggregated user counts by geographic area for the world map."""
+        users_with_location = User.objects.filter(
+            latitude__isnull=False,
+            longitude__isnull=False
+        )
+        buckets = defaultdict(int)
+        for u in users_with_location:
+            lat = float(u.latitude)
+            lng = float(u.longitude)
+            key = (round(lat, 2), round(lng, 2))
+            buckets[key] += 1
+        data = [
+            {'lat': lat, 'lng': lng, 'count': count}
+            for (lat, lng), count in buckets.items()
+        ]
+        return Response({'regions': data, 'total': sum(buckets.values())})
+
+
+class RoomViewSet(viewsets.ModelViewSet):
+    serializer_class = RoomSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RoomCreateSerializer
+        if self.action in ('update', 'partial_update'):
+            return RoomCreateSerializer
+        if self.action == 'retrieve':
+            return RoomDetailSerializer
+        return RoomSerializer
+
+    def get_queryset(self):
+        return Room.objects.filter(members=self.request.user).distinct()
+
+    def perform_create(self, serializer):
+        room = serializer.save(created_by=self.request.user)
+        room.members.add(self.request.user)
+        # Ensure each company room starts with a default "#general" channel.
+        if not room.is_direct:
+            Channel.objects.get_or_create(
+                room=room,
+                name='general',
+                defaults={
+                    'description': 'General discussion',
+                    'is_default': True,
+                    'created_by': self.request.user,
+                },
+            )
+
+    def update(self, request, *args, **kwargs):
+        """Only allow company (non-direct) room updates by the owner."""
+        instance = self.get_object()
+        if not instance.is_direct and instance.created_by_id != request.user.id:
+            return Response({'detail': 'Only the company owner can edit.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Only allow company (non-direct) room updates by the owner."""
+        instance = self.get_object()
+        if not instance.is_direct and instance.created_by_id != request.user.id:
+            return Response({'detail': 'Only the company owner can edit.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    @action(detail=False, methods=['post'])
+    def dm(self, request):
+        """Get or create a direct message room with another user."""
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            other = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        if other.id == request.user.id:
+            return Response({'error': 'Cannot create DM with yourself'}, status=status.HTTP_400_BAD_REQUEST)
+        room = Room.objects.filter(
+            is_direct=True,
+            members=request.user
+        ).filter(members=other).first()
+        if not room:
+            room = Room.objects.create(
+                name=f'{request.user.username} & {other.username}',
+                is_direct=True,
+                created_by=request.user
+            )
+            room.members.add(request.user, other)
+        return Response(RoomSerializer(room).data)
+
+    @action(detail=True, methods=['post'])
+    def join(self, request, pk=None):
+        room = self.get_object()
+        room.members.add(request.user)
+        return Response({'status': 'joined'})
+
+    @action(detail=True, methods=['post'])
+    def leave(self, request, pk=None):
+        room = self.get_object()
+        room.members.remove(request.user)
+        return Response({'status': 'left'})
+
+    @action(detail=True, methods=['post'], url_path='invite')
+    def invite(self, request, pk=None):
+        """
+        Invite one or more users into a room (company or group).
+        Body: { "user_ids": [1, 2, 3] }
+        """
+        room = self.get_object()
+        if room.is_direct:
+            return Response({'detail': 'Cannot invite users to a direct message room.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list) or not user_ids:
+            return Response({'detail': 'user_ids must be a non-empty list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        valid_ids = [uid for uid in user_ids if isinstance(uid, int) or (isinstance(uid, str) and uid.isdigit())]
+        if not valid_ids:
+            return Response({'detail': 'No valid user ids provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normalize to ints
+        valid_ids = [int(uid) for uid in valid_ids if int(uid) != request.user.id]
+        if not valid_ids:
+            return Response({'detail': 'No users to invite.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        added = []
+        for u in User.objects.filter(id__in=valid_ids).exclude(id__in=room.members.values_list('id', flat=True)):
+            room.members.add(u)
+            added.append(u.id)
+
+        serializer = RoomDetailSerializer(room, context={'request': request})
+        return Response({'added': added, 'room': serializer.data})
+
+    @action(detail=True, methods=['get', 'post'], url_path='channels')
+    def channels(self, request, pk=None):
+        """
+        List or create channels within a company room.
+
+        GET: return all channels for this room. If none exist for a non-direct room,
+        automatically create a default "#general" channel.
+        POST: create a new channel: { "name": "...", "description": "..." }.
+        """
+        room = self.get_object()
+        if room.is_direct:
+            return Response({'detail': 'Channels are only available for company rooms.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.method == 'GET':
+            # Auto-bootstrap a default channel if the company has none.
+            if not room.channels.exists():
+                Channel.objects.create(
+                    room=room,
+                    name='general',
+                    description='General discussion',
+                    is_default=True,
+                    created_by=request.user,
+                )
+            channels = room.channels.all().order_by('created_at')
+            data = [
+                {
+                    'id': ch.id,
+                    'name': ch.name,
+                    'description': ch.description,
+                    'is_default': ch.is_default,
+                }
+                for ch in channels
+            ]
+            return Response(data)
+
+        # POST – create a new channel
+        name = (request.data.get('name') or '').strip()
+        description = (request.data.get('description') or '').strip()
+        if not name:
+            return Response({'error': 'Channel name is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if room.channels.filter(name__iexact=name).exists():
+            return Response({'error': 'Channel with this name already exists'}, status=status.HTTP_400_BAD_REQUEST)
+        ch = Channel.objects.create(
+            room=room,
+            name=name,
+            description=description,
+            created_by=request.user,
+        )
+        return Response(
+            {
+                'id': ch.id,
+                'name': ch.name,
+                'description': ch.description,
+                'is_default': ch.is_default,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MessageViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSerializer
+
+    def get_queryset(self):
+        """
+        For list views, optionally filter by ?room=<id> and ?channel=<id>.
+        For detail / actions (e.g. react), allow lookup by pk as long as the
+        current user is a member of the room.
+        """
+        base_qs = Message.objects.filter(room__members=self.request.user)
+        room_id = self.request.query_params.get('room')
+        channel_id = self.request.query_params.get('channel')
+        if room_id:
+            base_qs = base_qs.filter(room_id=room_id)
+        if channel_id:
+            base_qs = base_qs.filter(channel_id=channel_id)
+        return base_qs
+
+    def get_object(self):
+        """
+        Ensure that detail routes like /messages/<id>/react/ always look up the
+        message by primary key within rooms the current user is a member of,
+        regardless of any missing ?room=<id> filter in the query params.
+        This avoids 404s for actions such as `react` that operate on an
+        individual message.
+        """
+        lookup_value = self.kwargs.get(self.lookup_field or 'pk')
+        return get_object_or_404(
+            Message,
+            pk=lookup_value,
+            room__members=self.request.user,
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(sender=self.request.user)
+
+    @action(detail=False, methods=['post'], url_path='upload')
+    def upload(self, request):
+        """Upload a file for use in messages. Returns the public URL."""
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        ext = os.path.splitext(file.name)[1] or '.bin'
+        path = default_storage.save(f'message_uploads/{uuid.uuid4().hex}{ext}', file)
+        url = default_storage.url(path)
+        if url.startswith('/'):
+            url = request.build_absolute_uri(url)
+        return Response({'url': url, 'filename': file.name})
+
+    @action(detail=True, methods=['post'])
+    def react(self, request, pk=None):
+        msg = self.get_object()
+        emoji = request.data.get('emoji')
+        if not emoji:
+            return Response({'error': 'Emoji required'}, status=status.HTTP_400_BAD_REQUEST)
+        reactions = msg.reactions or {}
+        user_id = str(request.user.id)
+        if emoji not in reactions:
+            reactions[emoji] = []
+        if user_id in reactions[emoji]:
+            reactions[emoji].remove(user_id)
+        else:
+            reactions[emoji].append(user_id)
+        if not reactions[emoji]:
+            del reactions[emoji]
+        msg.reactions = reactions
+        msg.save()
+        serialized = MessageSerializer(msg, context={'request': request}).data
+
+        # Broadcast reaction updates to all WebSocket clients in this room.
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer is not None:
+                async_to_sync(channel_layer.group_send)(
+                    f'chat_{msg.room_id}',
+                    {
+                        'type': 'chat_message_reacted',
+                        'message': serialized,
+                    },
+                )
+        except Exception:
+            # WebSocket broadcast failures should not break the HTTP request.
+            pass
+
+        return Response(serialized)
+
+    @action(detail=False, methods=['post'], url_path='mark-read')
+    def mark_read(self, request):
+        """Mark messages as read by the current user. Body: { message_ids: [1, 2, 3] }"""
+        message_ids = request.data.get('message_ids', [])
+        if not message_ids:
+            return Response({'marked': []})
+        room_id = request.data.get('room_id')
+        if not room_id:
+            return Response({'error': 'room_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not Room.objects.filter(id=room_id, members=request.user).exists():
+            return Response({'error': 'Not a member of this room'}, status=status.HTTP_403_FORBIDDEN)
+        created = []
+        for msg in Message.objects.filter(id__in=message_ids, room_id=room_id).exclude(sender=request.user):
+            _, created_flag = MessageRead.objects.get_or_create(
+                message=msg, user=request.user, defaults={}
+            )
+            if created_flag:
+                created.append(msg.id)
+        return Response({'marked': created})

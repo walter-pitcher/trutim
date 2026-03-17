@@ -53,6 +53,32 @@ class RegisterView(APIView):
             username=username, email=email, password=password,
             first_name=first_name, last_name=last_name, title=title
         )
+        # Auto-join the new user to existing company rooms or create a default one.
+        from .models import Room, Channel
+
+        company_rooms = Room.objects.filter(is_direct=False)
+        if not company_rooms.exists():
+            # Bootstrap a default company room for new installs so the sidebar isn't empty.
+            room = Room.objects.create(
+                name='Trutim HQ',
+                description='Default company room for new members',
+                created_by=user,
+            )
+            room.members.add(user)
+            Channel.objects.get_or_create(
+                room=room,
+                name='general',
+                defaults={
+                    'description': 'General discussion',
+                    'is_default': True,
+                    'created_by': user,
+                },
+            )
+        else:
+            # Add the new user as a member of all existing company rooms.
+            for room in company_rooms:
+                room.members.add(user)
+
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 

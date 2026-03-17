@@ -123,6 +123,11 @@
   background: var(--border);
 }
 
+.btn-icon.active {
+  background: var(--accent);
+  color: white;
+}
+
 .room-content {
   flex: 1;
   min-height: 0;

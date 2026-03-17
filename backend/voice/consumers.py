@@ -91,7 +91,7 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
         self._command_audio_buffer = []
         self._awaiting_command = False
 
-        self._load_models()
+        await self._load_models()
 
         await self.channel_layer.group_add(self.voice_group, self.channel_name)
         await self.accept()
@@ -202,6 +202,10 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
             self._command_audio_buffer.clear()
             self.audio_buffer.reset()
             self.keyword_spotter.clear_buffer()
+            await self.send(text_data=json.dumps({
+                'type': 'wake_word_detected',
+                'confidence': result.get('confidence', 0),
+            }))
 
     async def _handle_text_command(self, data):
         """Execute a text-based voice command."""
@@ -258,6 +262,7 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'listening_state',
             'state': 'listening',
+            'detector_state': self.wake_detector.state.name,
             'message': 'Listening for wake word "Trutim"...',
         }))
 
@@ -270,6 +275,7 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'listening_state',
             'state': 'stopped',
+            'detector_state': self.wake_detector.state.name,
             'message': 'Voice control paused.',
         }))
 
@@ -341,9 +347,11 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'listening_state',
             'state': 'listening',
+            'detector_state': self.wake_detector.state.name,
             'message': 'Listening for wake word...',
         }))
 
+    @database_sync_to_async
     def _load_models(self):
         """Load keyword spotting models if available."""
         try:
@@ -360,16 +368,20 @@ class VoiceControlConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _create_session(self):
-        from .models import VoiceSession
-        self._session = VoiceSession.objects.create(
-            user=self.user,
-            room_id=self.room_id,
-        )
+        try:
+            from .models import VoiceSession
+            self._session = VoiceSession.objects.create(
+                user=self.user,
+                room_id=self.room_id,
+            )
+        except Exception as e:
+            logger.warning("Could not create voice session: %s", e)
+            self._session = None
 
     @database_sync_to_async
     def _end_session(self):
         from .models import VoiceSession
-        if hasattr(self, '_session'):
+        if hasattr(self, '_session') and self._session is not None:
             VoiceSession.objects.filter(id=self._session.id).update(
                 ended_at=timezone.now(),
                 total_commands=self._command_count,

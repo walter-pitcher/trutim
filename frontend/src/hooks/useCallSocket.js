@@ -9,6 +9,8 @@ const getWsUrl = (path) => {
 export function useCallSocket(roomId, token, onSignal) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef(null);
+  const onSignalRef = useRef(onSignal);
+  onSignalRef.current = onSignal;
 
   const send = useCallback((data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -28,7 +30,7 @@ export function useCallSocket(roomId, token, onSignal) {
     ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        onSignal?.(data);
+        onSignalRef.current?.(data);
       } catch (_) {}
     };
 

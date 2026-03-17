@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',
     'chat',
+    'voice',
 ]
 
 MIDDLEWARE = [
@@ -145,3 +146,17 @@ CHANNEL_LAYERS = {
 #         'CONFIG': {'hosts': [('127.0.0.1', 6379)]},
 #     }
 # }
+
+# Voice Control & Keyword Spotting
+VOICE_CONTROL = {
+    'WAKE_WORD': 'trutim',
+    'CONFIDENCE_THRESHOLD': 0.85,
+    'SAMPLE_RATE': 16000,
+    'MODEL_DIR': BASE_DIR / 'voice_models',
+    'TRAINING_DATA_DIR': BASE_DIR / 'voice_training_data',
+    'DEFAULT_ARCHITECTURE': 'ds_cnn',
+    'MAX_AUDIO_LENGTH_S': 10.0,
+    'COMMAND_TIMEOUT_MS': 5000.0,
+    'ENABLE_NOISE_REDUCTION': True,
+    'ENABLE_VAD': True,
+}

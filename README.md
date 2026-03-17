@@ -2,19 +2,35 @@
 
 # Trutim
 
-<img src="frontend/public/trutim.svg" alt="Trutim Logo" width="180" height="180">
+**Real-time chat, collaboration, and voice-controlled platform for engineers and developers.** Built on Django Channels (WebSockets), WebRTC, and a TensorFlow-powered keyword spotting engine for hands-free voice control.
 
-### *Where engineers collaborate in real time—no more "did you get my message?"*
+## Features
 
-**A full-stack real-time collaboration platform** built for developers who value instant communication. Trutim combines live messaging, WebRTC video conferencing, screen sharing, and an AI assistant—all powered by Django Channels and modern React.
+- **Live Chat** — Real-time messaging with WebSockets, emoji reactions, typing indicators
+- **Video Call** — WebRTC-based video conferencing with multiple participants
+- **Screen Share** — Share your screen during calls
+- **Strong Emojis** — Quick emoji bar + full emoji picker, message reactions
+- **Voice Control** — Hands-free platform control via wake word detection and keyword spotting
+- **Wake Word Engine** — Deep learning "Trutim" wake word detector with real-time streaming
+- **Keyword Spotting** — 25-keyword vocabulary for voice commands (call, message, join, mute, etc.)
+- **Automatic Speech Recognition** — CTC-based ASR with command-constrained decoding
 
-<p>
-  <img src="docs/assets/coding-robot.svg" alt="Built for developers" width="70" height="70">
-  <img src="docs/assets/realtime-rocket.svg" alt="Real-time speed" width="70" height="70">
-  <img src="docs/assets/chat-lightning.svg" alt="Lightning chat" width="70" height="70">
-  <img src="docs/assets/video-call.svg" alt="Video calls" width="70" height="70">
-  <img src="docs/assets/ai-brain.svg" alt="AI assistant" width="70" height="70">
-</p>
+---
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | Django 4.x, Django REST Framework, Django Channels, Daphne (ASGI) |
+| **Database** | PostgreSQL 15 |
+| **Frontend** | React 19, Vite 7 |
+| **Auth** | JWT (SimpleJWT) |
+| **Real-time** | WebSockets (Channels), WebRTC |
+| **Voice / ML** | TensorFlow, TensorFlow Lite, NumPy, SciPy |
+| **DSP** | MFCC, Mel Spectrograms, Spectral Subtraction, Wiener Filtering, VAD |
+| **Deep Learning** | DS-CNN, BiLSTM + Attention, TC-ResNet, Conformer, Multi-Head Spotter |
+
+---
 
 </div>
 
@@ -104,8 +120,12 @@ A dedicated panel for sharing code snippets. Click the code icon in the room hea
 ### 1. Clone and Install Dependencies
 
 ```bash
+<<<<<<< HEAD
 git clone <repository-url>
 cd sean
+=======
+docker compose up -d db
+>>>>>>> 9d4d154 (update chatting)
 ```
 
 ### 2. Backend Setup
@@ -230,6 +250,384 @@ export DB_PORT=5432
 
 For production, use a `.env` file with `python-dotenv` or your deployment platform's secrets manager.
 
+<<<<<<< HEAD
+=======
+```bash
+python manage.py makemigrations voice
+python manage.py migrate
+python manage.py createsuperuser   # optional, for admin
+```
+
+For development (HTTP only):
+
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
+For production (HTTP + WebSockets via ASGI):
+
+```bash
+daphne -b 0.0.0.0 -p 8000 trutim.asgi:application
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:5173` and proxies API/WS to the backend.
+
+---
+
+## Voice Control System
+
+### Overview
+
+The voice control system enables hands-free operation of the entire Trutim platform through speech. It uses a multi-stage pipeline:
+
+```
+Microphone Audio
+    │
+    ▼
+┌──────────────────────┐
+│  Audio Preprocessing  │  Resampling, DC blocking, pre-emphasis,
+│  (DSP Pipeline)       │  normalization, dithering
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Noise Reduction      │  Spectral subtraction, Wiener filtering,
+│  + VAD                │  Voice Activity Detection
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Feature Extraction   │  MFCC, Mel spectrograms, delta features,
+│                       │  spectral centroid/bandwidth/rolloff
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Wake Word Detector   │  CNN/RNN model detects "Trutim"
+│  (Always Listening)   │  Confidence smoothing + debouncing
+└──────────┬───────────┘
+           │ wake word detected
+           ▼
+┌──────────────────────┐
+│  Keyword Spotter      │  Multi-keyword detection from 25-word
+│  (Command Window)     │  vocabulary, sliding window analysis
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  ASR + Language Model │  CTC-based speech recognition,
+│                       │  command-constrained decoding
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Intent Classifier    │  Multi-strategy classification:
+│                       │  exact match → keyword → pattern → fuzzy
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Entity Extractor     │  Resolve users, rooms, text content
+│                       │  against the database
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Command Executor     │  Execute platform actions via
+│                       │  Django ORM + Channels
+└──────────────────────┘
+```
+
+### Supported Voice Commands
+
+| Command | Example Phrases | Action |
+|---------|----------------|--------|
+| **Call** | "call john", "call user sarah" | Start a voice call |
+| **Video Call** | "video call", "start video call" | Start a video call |
+| **Send Message** | "send message to john", "message sarah" | Send a text message |
+| **Join Room** | "join room general", "join engineering" | Join a chat room |
+| **Leave Room** | "leave room", "exit" | Leave current room |
+| **Create Room** | "create room standup" | Create a new room |
+| **Mute** | "mute", "mute microphone" | Mute microphone |
+| **Unmute** | "unmute", "unmute mic" | Unmute microphone |
+| **Camera** | "toggle camera", "mute camera" | Toggle camera on/off |
+| **Screen Share** | "share screen", "screen share" | Start screen sharing |
+| **Stop Share** | "stop share", "stop screen share" | Stop screen sharing |
+| **Select User** | "select user john", "select sarah" | Select a user |
+| **Open Room** | "open room general", "go to design" | Navigate to a room |
+| **Go Back** | "go back", "back" | Navigate back |
+| **End Call** | "end call", "hang up" | End the current call |
+| **Confirm** | "yes", "confirm", "okay" | Confirm pending action |
+| **Cancel** | "no", "cancel", "stop" | Cancel pending action |
+| **Broadcast** | "send to everyone", "broadcast" | Message all room members |
+
+### Keyword Vocabulary (25 keywords)
+
+```
+trutim   call     message  send     video    join     leave    create
+room     mute     unmute   camera   screen   share    select   open
+close    back     user     everyone yes      no       cancel   confirm
+_silence
+```
+
+### Model Architectures
+
+| Architecture | Parameters | Strengths | Use Case |
+|-------------|-----------|-----------|----------|
+| **DS-CNN** | ~80K | Lightweight, fast inference | On-device / edge deployment |
+| **Attention-RNN** | ~250K | High accuracy, BiLSTM + MHA | Balanced accuracy/speed |
+| **TC-ResNet** | ~150K | Causal convolutions, streaming | Real-time streaming detection |
+| **Conformer** | ~500K | CNN + Transformer hybrid | Highest accuracy (server-side) |
+| **Multi-Head** | ~350K | Simultaneous wake + command detection | Combined wake word + keyword spotting |
+
+### Training Pipeline
+
+#### 1. Generate Training Data
+
+Produces synthetic training data using formant-based voice synthesis with diverse speaker profiles, noise conditions, and room acoustics.
+
+```bash
+# Default: 2000 samples/keyword, 50 speakers
+python manage.py generate_training_data
+
+# Large-scale: 5000 samples/keyword, 100 speakers
+python manage.py generate_training_data --samples-per-keyword 5000 --speakers 100
+
+# Specific keywords only
+python manage.py generate_training_data --keywords trutim call message video
+```
+
+**Data generation features:**
+- 50+ simulated speaker profiles (male/female, varying pitch, breathiness, jitter)
+- 10 noise types: white, pink, brown, babble, office, traffic, music, keyboard, fan, rain
+- SNR range: 5–30 dB
+- Room acoustics: small room, medium room, large room, concert hall
+- Speed perturbation: 0.8x–1.3x
+- Pitch variation: 0.7x–1.4x
+- Silence and unknown-word negative samples
+
+#### 2. Train a Model
+
+```bash
+# Train DS-CNN (fast, lightweight)
+python manage.py train_wake_word --architecture ds_cnn --epochs 100 --activate
+
+# Train Conformer (best accuracy)
+python manage.py train_wake_word --architecture conformer --epochs 200 --batch-size 32 --activate
+
+# Train Attention-RNN with custom learning rate
+python manage.py train_wake_word --architecture attention_rnn --epochs 150 --lr 0.0005
+
+# Train TC-ResNet for streaming
+python manage.py train_wake_word --architecture tc_resnet --epochs 100 --activate
+```
+
+**Training features:**
+- Cosine annealing with warm restarts learning rate schedule
+- Label smoothing (0.1) for better generalization
+- SpecAugment (frequency + time masking)
+- Audio augmentation (time shift, speed perturbation, pitch shift, gain, noise injection)
+- Mixup data augmentation
+- Class-weighted loss for imbalanced datasets
+- Early stopping + best-model checkpointing
+- TensorBoard logging
+- Automatic TF Lite export with quantization (dynamic, float16, int8)
+
+#### 3. TF Lite Export
+
+Models are automatically exported to TF Lite during training with multiple quantization options:
+
+| Quantization | Model Size | Inference Speed | Accuracy |
+|-------------|-----------|----------------|----------|
+| None (float32) | Baseline | Baseline | Best |
+| Dynamic range | ~4x smaller | ~2x faster | Near-best |
+| Float16 | ~2x smaller | ~1.5x faster | Near-best |
+| Full int8 | ~4x smaller | ~3x faster | Slightly reduced |
+
+### DSP Pipeline Details
+
+#### Audio Preprocessing (`voice/dsp/audio_processor.py`)
+
+| Stage | Description |
+|-------|-------------|
+| Decoding | PCM16, PCM24, PCM32, float32, WAV format support |
+| Channel mixing | Stereo → mono averaging |
+| Resampling | Polyphase interpolation (arbitrary rate conversion) |
+| DC blocking | IIR filter: `y[n] = x[n] - x[n-1] + R·y[n-1]` |
+| Dithering | TPDF (Triangular Probability Density Function) |
+| Pre-emphasis | High-pass: `y[n] = x[n] - 0.97·x[n-1]` |
+| Normalization | Peak normalize to [-1, 1] |
+| Framing | 25ms frames, 10ms hop, Hann/Hamming/Blackman window |
+
+#### Feature Extraction (`voice/dsp/feature_extraction.py`)
+
+| Feature | Dimensions | Description |
+|---------|-----------|-------------|
+| Mel spectrogram | (frames, 80) | 80 mel-spaced triangular filterbank bins |
+| Log filterbank | (frames, 80) | Log-compressed mel energies |
+| MFCC | (frames, 13) | DCT-II of log mel, cepstral liftering |
+| MFCC + delta | (frames, 26) | MFCC + first derivative |
+| MFCC + delta + delta-delta | (frames, 39) | Full MFCC feature set |
+| Spectral features | (frames, 4) | Centroid, bandwidth, rolloff, flux |
+| Full features | (frames, 123) | All of the above concatenated |
+
+#### Noise Reduction (`voice/dsp/noise_reduction.py`)
+
+1. **Noise profile estimation** — from initial silence or provided noise sample
+2. **Spectral subtraction** — `|Y|² = max(|X|² - α·|N|², β·|N|²)` with oversubtraction factor
+3. **Wiener filter** — `H = |S|² / (|S|² + β·|N|²)` for residual suppression
+4. **Spectral smoothing** — temporal smoothing to reduce musical noise artifacts
+
+#### Voice Activity Detection (`voice/dsp/noise_reduction.py`)
+
+- Energy-based detection with adaptive thresholding
+- Zero-crossing rate analysis
+- Finite state machine: SILENCE → SPEECH_START → SPEECH → SPEECH_END
+- Hangover logic to prevent premature cutoff
+- Configurable speech/silence duration thresholds
+- Segment merging for close speech regions
+
+---
+
+## Usage
+
+### Web UI
+
+1. **Register** — Create an account with username, email, title (e.g. Senior Engineer)
+2. **Create Room** — From the dashboard, create a new room
+3. **Chat** — Send messages, use quick emojis or the full picker
+4. **Video Call** — Click the video icon in a room to start a call
+5. **Screen Share** — Use the screen share button during a video call
+
+### Voice Control (WebSocket)
+
+Connect to the voice control WebSocket and stream audio:
+
+```javascript
+const ws = new WebSocket(`ws://localhost:8000/ws/voice/${roomId}/?token=${jwt}`);
+
+// Start listening for wake word
+ws.send(JSON.stringify({ type: 'start_listening' }));
+
+// Stream audio chunks (PCM16, base64-encoded)
+ws.send(JSON.stringify({
+  type: 'audio_data',
+  data: base64PCM16Audio,
+  sample_rate: 16000,
+}));
+
+// Or send raw binary PCM16 audio directly
+ws.send(pcm16ArrayBuffer);
+
+// Or send text commands directly (bypass audio pipeline)
+ws.send(JSON.stringify({ type: 'text_command', text: 'call john' }));
+
+// Or send spotted keywords
+ws.send(JSON.stringify({
+  type: 'keyword_command',
+  keywords: ['call', 'user', 'john'],
+}));
+
+// Listen for events
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+
+  switch (data.type) {
+    case 'wake_word_detected':
+      // { confidence: 0.95 } — system is listening for command
+      break;
+    case 'keyword_spotted':
+      // { keywords: [{ keyword: 'call', confidence: 0.92 }] }
+      break;
+    case 'command_result':
+      // { result: { success: true, command: 'call_user', message: 'Calling john...' } }
+      break;
+    case 'listening_state':
+      // { state: 'listening' | 'stopped', message: '...' }
+      break;
+    case 'command_timeout':
+      // Command window expired without valid command
+      break;
+  }
+};
+
+// Get current status
+ws.send(JSON.stringify({ type: 'get_status' }));
+
+// Update configuration
+ws.send(JSON.stringify({
+  type: 'update_config',
+  config: { confidence_threshold: 0.9 },
+}));
+
+// Stop listening
+ws.send(JSON.stringify({ type: 'stop_listening' }));
+```
+
+### Voice Control REST API
+
+```bash
+# Execute a voice command (text-based)
+curl -X POST http://localhost:8000/api/voice/execute/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "call john", "room_id": 1}'
+
+# Get voice system info (keywords, commands, models)
+curl http://localhost:8000/api/voice/system/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# Get/update your voice profile
+curl http://localhost:8000/api/voice/profiles/me/ \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -X PATCH http://localhost:8000/api/voice/profiles/update_settings/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"confidence_threshold": 0.9, "wake_word": "trutim"}'
+
+# View command history
+curl http://localhost:8000/api/voice/commands/log/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# Command stats
+curl http://localhost:8000/api/voice/commands/log/stats/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# List keyword spotting models
+curl http://localhost:8000/api/voice/models/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# Activate a model
+curl -X POST http://localhost:8000/api/voice/models/1/activate/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# Benchmark a model
+curl http://localhost:8000/api/voice/models/1/benchmark/ \
+  -H "Authorization: Bearer $TOKEN"
+
+# Trigger training data generation
+curl -X POST http://localhost:8000/api/voice/generate-data/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"samples_per_keyword": 5000, "num_speakers": 100}'
+
+# Trigger model training
+curl -X POST http://localhost:8000/api/voice/train/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"architecture": "ds_cnn", "epochs": 100, "batch_size": 64}'
+```
+
+>>>>>>> 9d4d154 (update chatting)
 ---
 
 ## Project Structure
@@ -237,6 +635,7 @@ For production, use a `.env` file with `python-dotenv` or your deployment platfo
 ```
 sean/
 ├── backend/
+<<<<<<< HEAD
 │   ├── chat/                 # Chat application
 │   │   ├── ai_views.py       # AI chat streaming endpoint
 │   │   ├── consumers.py      # WebSocket consumers (chat, call signaling)
@@ -250,10 +649,70 @@ sean/
 │   │   ├── asgi.py           # ASGI application (Channels)
 │   │   ├── settings.py
 │   │   └── urls.py
+=======
+│   ├── trutim/                         # Django project config
+│   │   ├── asgi.py                     # ASGI app (HTTP + WebSocket routing)
+│   │   ├── settings.py                 # Django settings + voice config
+│   │   ├── urls.py                     # Root URL config
+│   │   └── wsgi.py                     # WSGI app
+│   │
+│   ├── chat/                           # Chat & video call app
+│   │   ├── models.py                   # User, Room, Message, CallSession
+│   │   ├── views.py                    # REST API views
+│   │   ├── consumers.py                # WebSocket consumers (Chat, Call)
+│   │   ├── routing.py                  # WebSocket URL routing
+│   │   ├── serializers.py              # DRF serializers
+│   │   ├── middleware.py               # JWT auth for WebSockets
+│   │   ├── urls.py                     # API routes
+│   │   └── admin.py                    # Admin registration
+│   │
+│   ├── voice/                          # Voice Control & Keyword Spotting
+│   │   ├── dsp/                        # Digital Signal Processing
+│   │   │   ├── audio_processor.py      # Audio pipeline: decode, resample, pre-emphasis
+│   │   │   ├── feature_extraction.py   # MFCC, Mel spectrograms, spectral features
+│   │   │   └── noise_reduction.py      # Noise reduction, Wiener filter, VAD
+│   │   │
+│   │   ├── engine/                     # Deep Learning Engine
+│   │   │   ├── model_architecture.py   # 5 TF model architectures
+│   │   │   ├── wake_word_detector.py   # Real-time wake word detection
+│   │   │   ├── keyword_spotter.py      # Multi-keyword spotting (25 keywords)
+│   │   │   └── inference_engine.py     # TF Lite inference + quantization
+│   │   │
+│   │   ├── training/                   # Training Pipeline
+│   │   │   ├── data_generator.py       # Synthetic training data generation
+│   │   │   ├── augmentation.py         # Audio + spectrogram augmentation
+│   │   │   ├── dataset_builder.py      # tf.data.Dataset construction
+│   │   │   └── trainer.py              # Full training pipeline
+│   │   │
+│   │   ├── asr/                        # Automatic Speech Recognition
+│   │   │   ├── speech_recognizer.py    # CTC-based ASR engine
+│   │   │   └── language_model.py       # Command language model (n-gram)
+│   │   │
+│   │   ├── commands/                   # Voice Command System
+│   │   │   ├── command_registry.py     # 18 registered voice commands
+│   │   │   ├── intent_classifier.py    # Multi-strategy intent classification
+│   │   │   ├── entity_extractor.py     # User/room/text entity resolution
+│   │   │   └── command_executor.py     # Command execution via ORM + Channels
+│   │   │
+│   │   ├── management/commands/        # Django Management Commands
+│   │   │   ├── generate_training_data.py
+│   │   │   └── train_wake_word.py
+│   │   │
+│   │   ├── models.py                   # VoiceProfile, CommandLog, KWSModel, etc.
+│   │   ├── views.py                    # REST API for voice control
+│   │   ├── serializers.py              # DRF serializers
+│   │   ├── urls.py                     # Voice API routes
+│   │   ├── consumers.py                # WebSocket consumer (voice streaming)
+│   │   ├── routing.py                  # Voice WebSocket URL routing
+│   │   └── admin.py                    # Admin registration
+│   │
+>>>>>>> 9d4d154 (update chatting)
 │   ├── manage.py
 │   └── requirements.txt
+│
 ├── frontend/
 │   ├── src/
+<<<<<<< HEAD
 │   │   ├── components/       # AIPromptPanel, EmojiPicker, VideoCall
 │   │   ├── context/          # AuthContext
 │   │   ├── hooks/            # useChatSocket, useCallSocket
@@ -264,6 +723,16 @@ sean/
 ├── docs/
 │   └── assets/               # README illustrations
 ├── docker-compose.yml        # PostgreSQL service
+=======
+│   │   ├── components/                 # EmojiPicker, VideoCall
+│   │   ├── context/                    # AuthContext
+│   │   ├── hooks/                      # useChatSocket, useCallSocket
+│   │   └── pages/                      # Login, Register, Dashboard, Room
+│   ├── package.json
+│   └── vite.config.js
+│
+├── docker-compose.yml
+>>>>>>> 9d4d154 (update chatting)
 └── README.md
 ```
 
@@ -271,6 +740,7 @@ sean/
 
 ## API Reference
 
+<<<<<<< HEAD
 Base URL: `http://localhost:8001/api` (or your backend host)
 
 ### Authentication
@@ -363,3 +833,100 @@ Access the admin panel at `http://localhost:8001/admin/` after creating a superu
 ## License
 
 Proprietary. All rights reserved.
+=======
+### Chat API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register/` | Register new user |
+| POST | `/api/auth/login/` | Login (returns JWT) |
+| POST | `/api/auth/refresh/` | Refresh JWT token |
+| GET | `/api/users/` | List users |
+| GET | `/api/users/me/` | Current user profile |
+| GET | `/api/rooms/` | List rooms |
+| POST | `/api/rooms/` | Create room |
+| POST | `/api/rooms/{id}/join/` | Join room |
+| POST | `/api/rooms/{id}/leave/` | Leave room |
+| GET | `/api/messages/?room={id}` | List messages |
+| POST | `/api/messages/{id}/react/` | Add/remove reaction |
+
+### Voice Control API
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/voice/execute/` | Execute voice command (text/keywords) |
+| GET | `/api/voice/system/` | System info, keywords, available commands |
+| GET | `/api/voice/profiles/me/` | Get user voice profile |
+| PATCH | `/api/voice/profiles/update_settings/` | Update voice settings |
+| GET | `/api/voice/commands/log/` | Command history |
+| GET | `/api/voice/commands/log/stats/` | Command analytics |
+| GET | `/api/voice/models/` | List KWS models |
+| POST | `/api/voice/models/{id}/activate/` | Activate a model |
+| GET | `/api/voice/models/{id}/benchmark/` | Benchmark model inference |
+| GET | `/api/voice/models/active/` | Get active model |
+| POST | `/api/voice/train/` | Queue model training |
+| POST | `/api/voice/generate-data/` | Queue data generation |
+| GET | `/api/voice/datasets/` | List training datasets |
+| GET | `/api/voice/sessions/` | List voice sessions |
+
+### WebSocket Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `ws://host/ws/chat/{room_id}/?token={jwt}` | Live chat (messages, typing, presence) |
+| `ws://host/ws/call/{room_id}/?token={jwt}` | WebRTC signaling (offer, answer, ICE) |
+| `ws://host/ws/voice/{room_id}/?token={jwt}` | Voice control (audio streaming, commands) |
+| `ws://host/ws/voice/?token={jwt}` | Voice control (no room context) |
+
+---
+
+## Database Models
+
+### Chat Models
+
+- **User** — Extended Django user with title, avatar, online status
+- **Room** — Chat room with name, description, members, direct message flag
+- **Message** — Chat message with emoji reactions (JSON)
+- **CallSession** — Video call session tracking
+
+### Voice Models
+
+- **VoiceProfile** — Per-user voice settings (wake word, confidence threshold, noise reduction level, language)
+- **VoiceCommandLog** — Audit log of all voice commands (intent, confidence, entities, result, latency)
+- **KeywordSpotterModel** — Registry of trained models (architecture, accuracy, TFLite path, active flag)
+- **TrainingDataset** — Generated training dataset metadata (samples, keywords, manifest)
+- **VoiceSession** — Voice control session tracking (duration, command counts, wake detections)
+
+---
+
+## Dependencies
+
+### Backend (`requirements.txt`)
+
+| Package | Purpose |
+|---------|---------|
+| Django 4.x | Web framework |
+| djangorestframework | REST API |
+| django-cors-headers | CORS for React frontend |
+| psycopg2-binary | PostgreSQL adapter |
+| channels | WebSocket support (ASGI) |
+| channels-redis | Redis channel layer (production) |
+| daphne | ASGI server |
+| djangorestframework-simplejwt | JWT authentication |
+| Pillow | Image processing (avatars) |
+| tensorflow | Deep learning models, TF Lite |
+| tensorflow-io | Audio I/O utilities |
+| numpy | Numerical computation |
+| scipy | Signal processing |
+
+### Frontend (`package.json`)
+
+| Package | Purpose |
+|---------|---------|
+| react 19 | UI framework |
+| react-dom | DOM rendering |
+| react-router-dom | Client-side routing |
+| axios | HTTP client |
+| emoji-picker-element | Emoji picker component |
+| vite | Build tool / dev server |
+>>>>>>> 9d4d154 (update chatting)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { startVoiceCapture } from '../utils/voiceAudioCapture';
+import { getMediaErrorMessage } from '../utils/mediaDevices';
 
 const getWsUrl = (path) => {
   const base = window.location.origin.replace(/^http/, 'ws');
@@ -15,6 +16,9 @@ export function useVoiceSocket(roomId, token) {
   const [wakeConfidence, setWakeConfidence] = useState(0);
   const [lastEvent, setLastEvent] = useState(null);
   const [lastCommandResult, setLastCommandResult] = useState(null);
+  const [micLevel, setMicLevel] = useState(0);
+  const [captureError, setCaptureError] = useState(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const wsRef = useRef(null);
   const captureRef = useRef(null);
@@ -54,24 +58,42 @@ export function useVoiceSocket(roomId, token) {
     if (!listening || !connected) {
       captureRef.current?.stop?.();
       captureRef.current = null;
+      setMicLevel(0);
+      setIsCapturing(false);
+      setCaptureError(null);
       return;
     }
 
     let cancelled = false;
-    startVoiceCapture(sendRaw)
+    setCaptureError(null);
+    startVoiceCapture(sendRaw, {
+      onLevel: (level) => {
+        if (!cancelled) setMicLevel(level);
+      },
+    })
       .then((capture) => {
         if (cancelled) {
           capture.stop();
           return;
         }
         captureRef.current = capture;
+        setIsCapturing(true);
       })
-      .catch((err) => console.error('Voice capture failed:', err));
+      .catch((err) => {
+        if (!cancelled) {
+          captureRef.current = null;
+          setIsCapturing(false);
+          setMicLevel(0);
+          setCaptureError(getMediaErrorMessage(err));
+        }
+      });
 
     return () => {
       cancelled = true;
       captureRef.current?.stop?.();
       captureRef.current = null;
+      setMicLevel(0);
+      setIsCapturing(false);
     };
   }, [listening, connected, sendRaw]);
 
@@ -140,6 +162,9 @@ export function useVoiceSocket(roomId, token) {
     wakeConfidence,
     lastEvent,
     lastCommandResult,
+    micLevel,
+    captureError,
+    isCapturing,
     startListening,
     stopListening,
     sendTextCommand,

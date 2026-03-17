@@ -101,6 +101,48 @@
   margin: 0;
 }
 
+.voice-capture-error {
+  padding: 0.6rem 0.75rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+.voice-mic-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.voice-mic-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 48px;
+}
+
+.voice-mic-bar {
+  width: 8px;
+  min-height: 12px;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: height 0.08s ease-out;
+}
+
+.voice-mic-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 .voice-control-actions {
   display: flex;
   gap: 0.5rem;

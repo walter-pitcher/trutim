@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { MicIcon, XIcon } from './icons';
 import './VoiceControlPanel.css';
 
+const MIC_BAR_COUNT = 5;
+
 export default function VoiceControlPanel({
   isOpen,
   onClose,
@@ -9,6 +11,9 @@ export default function VoiceControlPanel({
   listening,
   detectorState,
   lastCommandResult,
+  micLevel = 0,
+  captureError,
+  isCapturing,
   startListening,
   stopListening,
   sendTextCommand,
@@ -46,6 +51,12 @@ export default function VoiceControlPanel({
             </span>
           </div>
 
+          {captureError && (
+            <div className="voice-capture-error">
+              <span>Microphone: {captureError}</span>
+            </div>
+          )}
+
           {!connected && (
             <p className="voice-control-hint">
               Voice control requires an active connection. Make sure you are in a chat room and logged in.
@@ -67,10 +78,37 @@ export default function VoiceControlPanel({
               </div>
 
               {listening && (
-                <div className="voice-listening-indicator">
-                  <span className="voice-pulse" />
-                  Listening for commands...
-                </div>
+                <>
+                  <div className="voice-mic-meter">
+                    <div className="voice-mic-bars">
+                      {Array.from({ length: MIC_BAR_COUNT }, (_, i) => {
+                        const center = (MIC_BAR_COUNT - 1) / 2;
+                        const dist = Math.abs(i - center);
+                        const factor = 1 - dist * 0.15;
+                        const h = Math.max(15, Math.min(100, micLevel * 120 * factor));
+                        return (
+                          <div
+                            key={i}
+                            className="voice-mic-bar"
+                            style={{ height: `${h}%` }}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="voice-mic-label">
+                      {isCapturing
+                        ? micLevel > 0.02
+                          ? 'Microphone active'
+                          : 'Listening...'
+                        : 'Starting...'}
+                    </span>
+                  </div>
+
+                  <div className="voice-listening-indicator">
+                    <span className="voice-pulse" />
+                    Listening for wake word &quot;Trutim&quot;...
+                  </div>
+                </>
               )}
 
               {detectorState && detectorState !== 'IDLE' && (

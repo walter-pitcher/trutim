@@ -5,6 +5,7 @@ import { UserStatusProvider } from './context/UserStatusContext';
 import { PresenceProvider } from './context/PresenceContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OAuthCallback from './pages/OAuthCallback';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
 import CompanyRoom from './pages/CompanyRoom';
@@ -34,6 +35,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/oauth/callback/:provider" element={<OAuthCallback />} />
           <Route path="/" element={<ProtectedRoute><PresenceProvider><MainLayout /></PresenceProvider></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="company/:id" element={<CompanyRoom />} />

@@ -17,6 +17,7 @@ router.register('messages', views.MessageViewSet, basename='message')
 urlpatterns = [
     path('auth/register/', views.RegisterView.as_view()),
     path('auth/login/', views.CustomTokenObtainPairView.as_view()),
+    path('auth/oauth/<str:provider>/', views.OAuthLoginView.as_view()),
     path('auth/refresh/', TokenRefreshView.as_view()),
     path('ai/chat/', AIChatView.as_view()),
     path('ai/image/', AIImageView.as_view()),

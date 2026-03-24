@@ -22,11 +22,15 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (username, password) => {
-    const { data } = await auth.login(username, password);
+  const applyAuthPayload = (data) => {
     localStorage.setItem('access', data.access);
     localStorage.setItem('refresh', data.refresh);
     setUser(data.user);
+  };
+
+  const login = async (username, password) => {
+    const { data } = await auth.login(username, password);
+    applyAuthPayload(data);
     return data;
   };
 
@@ -46,8 +50,17 @@ export function AuthProvider({ children }) {
     setUser(data);
   };
 
+  const oauthLogin = async (provider, code, redirectUri) => {
+    const { data } = await auth.oauthLogin(provider, {
+      code,
+      redirect_uri: redirectUri,
+    });
+    applyAuthPayload(data);
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, oauthLogin }}>
       {children}
     </AuthContext.Provider>
   );

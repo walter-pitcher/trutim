@@ -310,26 +310,37 @@ class ModelTrainer:
                 restore_best_weights=True,
                 verbose=1,
             ),
-            keras.callbacks.ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=0.5,
-                patience=self.config.reduce_lr_patience,
-                min_lr=self.config.min_lr,
-                verbose=1,
-            ),
             keras.callbacks.CSVLogger(
                 str(self._model_dir / 'training_log.csv'),
                 append=True,
             ),
         ]
 
+        # ReduceLROnPlateau is incompatible with a LearningRateSchedule optimizer;
+        # only add it when a fixed (float) learning rate is used.
+        if self.config.lr_schedule == 'constant':
+            callbacks.append(keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=self.config.reduce_lr_patience,
+                min_lr=self.config.min_lr,
+                verbose=1,
+            ))
+
         tensorboard_dir = self._model_dir / 'tensorboard'
         tensorboard_dir.mkdir(exist_ok=True)
-        callbacks.append(keras.callbacks.TensorBoard(
-            log_dir=str(tensorboard_dir),
-            histogram_freq=1,
-            update_freq='epoch',
-        ))
+        # TensorBoard is optional; keep training functional when it's not installed.
+        try:
+            import tensorboard  # noqa: F401
+            callbacks.append(keras.callbacks.TensorBoard(
+                log_dir=str(tensorboard_dir),
+                histogram_freq=1,
+                update_freq='epoch',
+            ))
+        except Exception:
+            logger.warning(
+                "TensorBoard is not installed; skipping TensorBoard callback."
+            )
 
         return callbacks
 

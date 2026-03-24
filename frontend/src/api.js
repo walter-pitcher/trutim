@@ -39,6 +39,7 @@ API.interceptors.response.use(
 export const auth = {
   login: (username, password) => API.post('/auth/login/', { username, password }),
   register: (data) => API.post('/auth/register/', data),
+  oauthLogin: (provider, data) => API.post(`/auth/oauth/${provider}/`, data),
 };
 
 export const users = {

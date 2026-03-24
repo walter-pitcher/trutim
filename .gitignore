@@ -6,6 +6,8 @@ __pycache__/
 .Python
 venv/
 env/
+backend/voice_training_data/
+backend/voice_models/
 .venv/
 *.egg-info/
 .eggs/
